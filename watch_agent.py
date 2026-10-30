@@ -31,6 +31,7 @@ import yaml
 ROOT = Path(__file__).parent
 CONFIG_PATH = ROOT / "config.yaml"
 SENT_PATH = ROOT / "sent.json"
+LAST_PATH = ROOT / "last_sent.txt"
 YT = "https://www.googleapis.com/youtube/v3"
 
 
@@ -202,7 +203,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--day", help="weekday name, e.g. monday (default: today)")
     ap.add_argument("--dry-run", action="store_true", help="print, don't send or record")
+    ap.add_argument("--force", action="store_true", help="send even if already sent today")
     args = ap.parse_args()
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    if not args.dry_run and not args.force and LAST_PATH.exists() and LAST_PATH.read_text().strip() == today:
+        print(f"Already sent today ({today}); skipping. Use --force to resend.")
+        return
 
     cfg = load_config()
     weekday = (args.day or datetime.now().strftime("%A")).lower()
@@ -231,6 +238,7 @@ def main():
     send_telegram(msg, token, chat_id)
     sent.update(v["id"] for v in videos)
     save_sent(sent)
+    LAST_PATH.write_text(today + "\n")
     print(f"Sent {len(videos)} video(s).")
 
 
