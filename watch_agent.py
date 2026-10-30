@@ -158,8 +158,9 @@ def pick_videos(day_cfg, cfg, api_key, sent):
 
     pool = filter_by_duration(pool, api_key, min_dur)
 
-    # 2) fallback searches only if we still need more
-    for q in day_cfg.get("search", []):
+    # 2) fallback searches only if allowed and we still need more
+    search_terms = [] if cfg.get("creators_only", False) else day_cfg.get("search", [])
+    for q in search_terms:
         if len(pool) >= n:
             break
         print(f"  searching '{q}'")

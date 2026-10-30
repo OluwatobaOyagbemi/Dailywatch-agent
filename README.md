@@ -81,6 +81,7 @@ All in `config.yaml`:
 - `videos_per_day` — how many links per message
 - `max_video_age_days` — ignore older uploads
 - `min_duration_minutes` — set to `0` to allow Shorts
+- `creators_only` — `true` sends only your listed creators; `false` fills gaps with search
 
 ## Ideas for later
 

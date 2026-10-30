@@ -11,6 +11,10 @@ max_video_age_days: 60
 # Ignore videos shorter than this (filters out Shorts). Set to 0 to allow all.
 min_duration_minutes: 4
 
+# true  = only send videos from the creators you list (never strangers from search)
+# false = fill any gaps with the search phrases below
+creators_only: true
+
 # Your weekly plan. One entry per weekday.
 #   theme    - shown as the message header
 #   creators - YouTube channel handles (the part after @ in the channel URL)
