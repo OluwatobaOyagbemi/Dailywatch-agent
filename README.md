@@ -1,6 +1,6 @@
 # Daily Watch Agent
 
-**A tiny automation that sends you a few YouTube videos every morning, matched to a weekly growth theme you choose.** No app, no dashboard, no cost — one Telegram message at 7 AM from creators you picked, never a repeat.
+**A tiny automation that sends you a few YouTube videos every morning, matched to a weekly growth theme you choose.** No app, no dashboard, no cost — one Telegram message at noon from creators you picked, never a repeat.
 
 Built by [Oluwatoba Oyagbemi](https://www.linkedin.com/in/oluwatoba-oyagbemi-24ba52323/) · Python · YouTube Data API · GitHub Actions · Telegram Bot API
 
@@ -45,7 +45,7 @@ Everything runs on free tiers. The script uses a few hundred YouTube API units a
 5. In your fork: *Settings → Secrets and variables → Actions* → add `YOUTUBE_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`.
 6. *Actions → Daily Watch → Run workflow.* Check your phone.
 
-To change the send time, edit the two `cron` lines and the `"07"` check in `.github/workflows/daily.yml` (GitHub cron is UTC).
+To change the send time, edit the two `cron` lines and the `"12"` check in `.github/workflows/daily.yml` (GitHub cron is UTC).
 
 ## Run it locally
 
