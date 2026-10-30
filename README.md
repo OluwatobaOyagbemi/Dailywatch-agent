@@ -1,93 +1,81 @@
 # Daily Watch Agent
 
-A tiny agent that sends you a handful of YouTube videos every morning, matched to a weekly growth theme you choose. No app, no dashboard, no cost — just a Telegram message at the time you pick.
+**A tiny automation that sends you a few YouTube videos every morning, matched to a weekly growth theme you choose.** No app, no dashboard, no cost — one Telegram message at 7 AM from creators you picked, never a repeat.
+
+Built by [Oluwatoba Oyagbemi](https://www.linkedin.com/in/oluwatoba-oyagbemi-24ba52323/) · Python · YouTube Data API · GitHub Actions · Telegram Bot API
+
+---
+
+## Why
+
+I had a weekly plan — communication on Mondays, leadership on Tuesdays, finance on Wednesdays — and I never followed it, because following it meant opening YouTube and getting pulled somewhere else.
+
+My first instinct was to build an app with calendar sync and push notifications. I scoped that down to the smallest thing that would actually change my behaviour: a config file, one script, and a scheduled job that puts the right videos in front of me before I've opened anything else.
+
+## What you get
 
 ```
-🎯 Monday — Communication
+🎯 Thursday — Relationship and Marriage
 
-1. How to speak so people listen
-   John Maxwell
-2. ...
+1. How to choose well before you commit
+   Pastor Dolapo Lawal
+2. The conversation every couple avoids
+   Ezinne Zara
+3. ...
 ```
+
+<!-- Replace this comment with a screenshot of the Telegram message:
+![Telegram message](docs/screenshot.png) -->
 
 ## How it works
 
-1. `config.yaml` holds your weekly plan: one theme per weekday, the creators you want to follow, and fallback search terms.
+1. `config.yaml` holds your weekly plan: one theme per weekday and the creators you follow.
 2. Every morning a GitHub Actions job runs `watch_agent.py`.
-3. The script pulls the latest uploads from your creators (falling back to search if needed), skips anything it already sent, drops Shorts, and picks the newest few.
-4. It sends them to you on Telegram and records the video IDs in `sent.json` so you never get repeats.
+3. The script pulls recent uploads from your creators, drops Shorts, skips anything already sent, and picks the newest few.
+4. It sends them to Telegram and records the video IDs in `sent.json` so you never get repeats.
 
-Everything runs on free tiers: YouTube Data API (10,000 units/day, this uses a few hundred), Telegram bots (free), GitHub Actions (free for public repos).
+Everything runs on free tiers. The script uses a few hundred YouTube API units a day against a 10,000 limit.
 
-## Make it yours (15 minutes)
+## Set it up for yourself (~15 min)
 
-### 1. Fork this repo
+1. **Fork** this repo (keep it public so Actions stays free).
+2. Edit `config.yaml` — your themes and your creators. A creator handle is the part after `@` in the channel URL (`youtube.com/@MaxwellLeadershipOfficial` → `MaxwellLeadershipOfficial`).
+3. **YouTube API key:** [console.cloud.google.com](https://console.cloud.google.com) → create or pick a project → *APIs & Services → Library* → enable **YouTube Data API v3** → *Credentials → Create credentials → API key*. No billing needed.
+4. **Telegram bot:** message [@BotFather](https://t.me/BotFather) → `/newbot` → copy the token. Open your new bot, press **Start**, send it "hi". Then visit `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy the number after `"chat":{"id":`.
+5. In your fork: *Settings → Secrets and variables → Actions* → add `YOUTUBE_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`.
+6. *Actions → Daily Watch → Run workflow.* Check your phone.
 
-Click **Fork** on GitHub. Keep it public so Actions minutes stay free.
+To change the send time, edit the two `cron` lines and the `"07"` check in `.github/workflows/daily.yml` (GitHub cron is UTC).
 
-### 2. Edit `config.yaml`
-
-Set your themes, creators, and search phrases. Creator handles are the part after `@` in a channel URL (`youtube.com/@JohnMaxwellCo` → `JohnMaxwellCo`). Leave `creators` empty for any day and the agent will rely on search.
-
-### 3. Get a YouTube API key
-
-1. Go to [console.cloud.google.com](https://console.cloud.google.com) and create a project (any name).
-2. **APIs & Services → Library** → search *YouTube Data API v3* → **Enable**.
-3. **APIs & Services → Credentials → Create credentials → API key**. Copy it.
-
-No billing account is needed for this API.
-
-### 4. Create a Telegram bot
-
-1. In Telegram, message [@BotFather](https://t.me/BotFather) and send `/newbot`. Follow the prompts; copy the **bot token**.
-2. Open a chat with your new bot and send it any message (e.g. "hi").
-3. Visit `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates` in a browser. Find `"chat":{"id": 123456789, ...}` — that number is your **chat id**.
-
-### 5. Add the three secrets to GitHub
-
-In your fork: **Settings → Secrets and variables → Actions → New repository secret**. Add:
-
-| Name | Value |
-|---|---|
-| `YOUTUBE_API_KEY` | from step 3 |
-| `TELEGRAM_BOT_TOKEN` | from step 4 |
-| `TELEGRAM_CHAT_ID` | from step 4 |
-
-### 6. Test it
-
-**Actions** tab → **Daily Watch** → **Run workflow**. You should get a Telegram message within a minute. If not, open the run and read the log.
-
-### 7. Set your time
-
-The workflow fires at 7:00 AM `America/New_York`. To change it, edit `.github/workflows/daily.yml`: update the two `cron` lines (GitHub cron is UTC) and the `"07"` hour check and `TZ` in the gate step.
-
-## Run it locally instead
+## Run it locally
 
 ```bash
 pip install -r requirements.txt
-export YOUTUBE_API_KEY=...
-export TELEGRAM_BOT_TOKEN=...
-export TELEGRAM_CHAT_ID=...
-
-python watch_agent.py --dry-run        # preview today's picks, send nothing
-python watch_agent.py --day saturday   # preview a specific day
-python watch_agent.py                  # send for real
+export YOUTUBE_API_KEY=... TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=...
+python watch_agent.py --dry-run --day monday   # preview, send nothing
+python watch_agent.py                          # send for real
 ```
 
-## Tweaks
+## Settings (`config.yaml`)
 
-All in `config.yaml`:
+| Key | What it does |
+|---|---|
+| `videos_per_day` | how many links per message |
+| `max_video_age_days` | ignore uploads older than this |
+| `min_duration_minutes` | `0` allows Shorts |
+| `creators_only` | `true` = only your listed creators; `false` = fill gaps with search |
 
-- `videos_per_day` — how many links per message
-- `max_video_age_days` — ignore older uploads
-- `min_duration_minutes` — set to `0` to allow Shorts
-- `creators_only` — `true` sends only your listed creators; `false` fills gaps with search
+## Design notes
+
+- **Creators before search.** Channel uploads cost ~2 API units; a search costs 100. Search is off by default so the message is never padded with strangers.
+- **A bad channel never kills the run.** Unknown or unreadable handles are logged and skipped.
+- **State lives in the repo.** `sent.json` is committed back by the workflow, so there's no database and nothing to host.
 
 ## Ideas for later
 
-- Add a one-line "why this video" note using a free LLM tier
-- Pull from a YouTube playlist instead of a channel
-- Send to WhatsApp or SMS instead of Telegram
+- One-line "why this video" note via a free LLM tier
+- WhatsApp, SMS or email delivery
+- A hosted version where you just text the bot your weekly plan
 
 ## License
 
