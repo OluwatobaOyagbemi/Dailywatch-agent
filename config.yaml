@@ -18,39 +18,39 @@ creators_only: true
 # Your weekly plan. One entry per weekday.
 #   theme    - shown as the message header
 #   creators - YouTube channel handles (the part after @ in the channel URL)
-#   search   - fallback search phrases used if creators don't have enough recent videos
+#   search   - fallback search phrases, used only when creators_only is false
 days:
   monday:
     theme: Communication
-    creators: [FemiLazarus, JohnMaxwellCo]
+    creators: [femi_lazarus, MaxwellLeadershipOfficial]
     search: ["how to communicate confidently", "public speaking skills"]
 
   tuesday:
     theme: Leadership
-    creators: [JohnMaxwellCo, PojuOyemade]
+    creators: [MaxwellLeadershipOfficial, PastorPoju]
     search: ["leadership principles", "how to lead a team"]
 
   wednesday:
     theme: Finance
-    creators: [PojuOyemade]
+    creators: [PastorPoju, femi_lazarus]
     search: ["personal finance for young adults", "building wealth in your 20s"]
 
   thursday:
     theme: Relationship and Marriage
-    creators: [FemiLazarus, Ezinne]
+    creators: [EzinneZara, PastorDolapoLawal, femi_lazarus]
     search: ["healthy relationships advice", "preparing for marriage"]
 
   friday:
     theme: Career
-    creators: [JohnMaxwellCo, FemiLazarus]
+    creators: [MaxwellLeadershipOfficial, PastorPoju, PastorDolapoLawal]
     search: ["career growth tips", "how to build a career"]
 
   saturday:
     theme: Voice and Guitar Training
-    creators: []
+    creators: [andycrowley]
     search: ["vocal warm up exercises", "beginner guitar lesson", "singing technique"]
 
   sunday:
     theme: Mindshift Sessions
-    creators: [FemiLazarus, PojuOyemade]
+    creators: [KoinoniaGlobal, CelebrationGlobalTV, femi_lazarus]
     search: ["mindset shift sermon", "renewing your mind"]
