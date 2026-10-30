@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────
+# Daily Watch Agent — edit this file, nothing else.
+# ─────────────────────────────────────────────────────────────
+
+# How many videos to send each day
+videos_per_day: 5
+
+# Only consider videos published within this many days (keeps it fresh)
+max_video_age_days: 60
+
+# Ignore videos shorter than this (filters out Shorts). Set to 0 to allow all.
+min_duration_minutes: 4
+
+# Your weekly plan. One entry per weekday.
+#   theme    - shown as the message header
+#   creators - YouTube channel handles (the part after @ in the channel URL)
+#   search   - fallback search phrases used if creators don't have enough recent videos
+days:
+  monday:
+    theme: Communication
+    creators: [FemiLazarus, JohnMaxwellCo]
+    search: ["how to communicate confidently", "public speaking skills"]
+
+  tuesday:
+    theme: Leadership
+    creators: [JohnMaxwellCo, PojuOyemade]
+    search: ["leadership principles", "how to lead a team"]
+
+  wednesday:
+    theme: Finance
+    creators: [PojuOyemade]
+    search: ["personal finance for young adults", "building wealth in your 20s"]
+
+  thursday:
+    theme: Relationship and Marriage
+    creators: [FemiLazarus, Ezinne]
+    search: ["healthy relationships advice", "preparing for marriage"]
+
+  friday:
+    theme: Career
+    creators: [JohnMaxwellCo, FemiLazarus]
+    search: ["career growth tips", "how to build a career"]
+
+  saturday:
+    theme: Voice and Guitar Training
+    creators: []
+    search: ["vocal warm up exercises", "beginner guitar lesson", "singing technique"]
+
+  sunday:
+    theme: Mindshift Sessions
+    creators: [FemiLazarus, PojuOyemade]
+    search: ["mindset shift sermon", "renewing your mind"]

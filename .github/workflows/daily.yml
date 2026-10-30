@@ -1,0 +1,58 @@
+name: Daily Watch
+
+on:
+  schedule:
+    # 7:00 AM America/New_York.
+    # GitHub cron is UTC: 11:00 UTC during EDT, 12:00 UTC during EST.
+    # Both lines are listed so it fires at 7 local year-round;
+    # the script checks the hour and skips the wrong one.
+    - cron: "0 11 * * *"
+    - cron: "0 12 * * *"
+  workflow_dispatch:   # lets you run it manually from the Actions tab
+
+permissions:
+  contents: write      # needed to commit sent.json back to the repo
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip if not 7 AM local
+        id: gate
+        run: |
+          HOUR=$(TZ=America/New_York date +%H)
+          echo "local hour is $HOUR"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$HOUR" = "07" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        if: steps.gate.outputs.run == 'true'
+        run: pip install -r requirements.txt
+
+      - name: Send today's videos
+        if: steps.gate.outputs.run == 'true'
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TZ: America/New_York
+        run: python watch_agent.py
+
+      - name: Save sent history
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          git config user.name "daily-watch-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add sent.json
+          git diff --cached --quiet || git commit -m "chore: record sent videos $(date -u +%F)"
+          git push
