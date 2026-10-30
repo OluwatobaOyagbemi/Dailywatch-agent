@@ -81,11 +81,15 @@ def channel_uploads_playlist(handle, api_key):
 
 def recent_from_channel(handle, api_key, cutoff, limit=10):
     """Latest uploads from one channel (cost: ~2 units)."""
-    playlist = channel_uploads_playlist(handle, api_key)
-    if not playlist:
+    try:
+        playlist = channel_uploads_playlist(handle, api_key)
+        if not playlist:
+            return []
+        data = yt_get("playlistItems", api_key, part="snippet",
+                      playlistId=playlist, maxResults=limit)
+    except requests.HTTPError as e:
+        print(f"  ! could not read @{handle}: {e.response.status_code} — skipping", file=sys.stderr)
         return []
-    data = yt_get("playlistItems", api_key, part="snippet",
-                  playlistId=playlist, maxResults=limit)
     out = []
     for it in data.get("items", []):
         sn = it["snippet"]
@@ -159,7 +163,11 @@ def pick_videos(day_cfg, cfg, api_key, sent):
         if len(pool) >= n:
             break
         print(f"  searching '{q}'")
-        extra = search_videos(q, api_key, cutoff)
+        try:
+            extra = search_videos(q, api_key, cutoff)
+        except requests.HTTPError as e:
+            print(f"  ! search failed: {e.response.status_code} — skipping", file=sys.stderr)
+            continue
         extra = filter_by_duration([v for v in extra if v["id"] not in seen and v["id"] not in sent],
                                    api_key, min_dur)
         add(extra)
