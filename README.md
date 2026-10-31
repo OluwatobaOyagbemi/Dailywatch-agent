@@ -1,8 +1,8 @@
 # Daily Watch Agent
 
-**A tiny automation that sends you a few YouTube videos every morning, matched to a weekly growth theme you choose.** No app, no dashboard, no cost — one Telegram message at noon from creators you picked, never a repeat.
+**A tiny automation that sends you a few YouTube videos every morning, matched to a weekly growth theme you choose.** No app, no dashboard, no cost — one Telegram message or email at noon from creators you picked, never a repeat.
 
-Built by [Oluwatoba Oyagbemi](https://www.linkedin.com/in/oluwatoba-oyagbemi-24ba52323/) · Python · YouTube Data API · GitHub Actions · Telegram Bot API
+Built by [Oluwatoba Oyagbemi](https://www.linkedin.com/in/oluwatoba-oyagbemi-24ba52323/) · Python · YouTube Data API · GitHub Actions · Telegram / Email
 
 ---
 
@@ -15,12 +15,12 @@ My first instinct was to build an app with calendar sync and push notifications.
 ## What you get
 
 ```
-🎯 Thursday — Relationship and Marriage
+🎯 Monday — Public Speaking and Communication
 
-1. How to choose well before you commit
-   Pastor Dolapo Lawal
-2. The conversation every couple avoids
-   Ezinne Zara
+1. How to speak so that people want to listen
+   TED
+2. The 3-step storytelling framework
+   Philipp Humm
 3. ...
 ```
 
@@ -39,11 +39,18 @@ Everything runs on free tiers. The script uses a few hundred YouTube API units a
 ## Set it up for yourself (~15 min)
 
 1. **Fork** this repo (keep it public so Actions stays free).
-2. Edit `config.yaml` — your themes and your creators. A creator handle is the part after `@` in the channel URL (`youtube.com/@MaxwellLeadershipOfficial` → `MaxwellLeadershipOfficial`).
+2. Copy `config.example.yaml` over `config.yaml` and edit it — your themes, your creators. A creator handle is the part after `@` in the channel URL (`youtube.com/@TED` → `TED`).
 3. **YouTube API key:** [console.cloud.google.com](https://console.cloud.google.com) → create or pick a project → *APIs & Services → Library* → enable **YouTube Data API v3** → *Credentials → Create credentials → API key*. No billing needed.
-4. **Telegram bot:** message [@BotFather](https://t.me/BotFather) → `/newbot` → copy the token. Open your new bot, press **Start**, send it "hi". Then visit `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy the number after `"chat":{"id":`.
-5. In your fork: *Settings → Secrets and variables → Actions* → add `YOUTUBE_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`.
-6. *Actions → Daily Watch → Run workflow.* Check your phone.
+4. **Pick how you want it delivered** (one or both), and set `deliver:` in `config.yaml`:
+
+   **Telegram** — message [@BotFather](https://t.me/BotFather) → `/newbot` → copy the token. Open your new bot, press **Start**, send it "hi". Then visit `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy the number after `"chat":{"id":`.
+   Secrets: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+
+   **Email** — works with Gmail, Outlook or any SMTP host. For Gmail: turn on 2-Step Verification, then create an [App Password](https://myaccount.google.com/apppasswords) (not your normal password).
+   Secrets: `SMTP_USER` (your address), `SMTP_PASS` (the app password), optionally `EMAIL_TO` (defaults to yourself), `SMTP_HOST` / `SMTP_PORT` (defaults: `smtp.gmail.com` / `587`; Outlook is `smtp.office365.com` / `587`)
+
+5. In your fork: *Settings → Secrets and variables → Actions* → add `YOUTUBE_API_KEY` plus the secrets for your delivery choice.
+6. *Actions → Daily Watch → Run workflow.* Check your phone or inbox.
 
 To change the send time, edit the two `cron` lines and the `"12"` check in `.github/workflows/daily.yml` (GitHub cron is UTC).
 
@@ -52,7 +59,8 @@ To change the send time, edit the two `cron` lines and the `"12"` check in `.git
 ```bash
 pip install -r requirements.txt
 export YOUTUBE_API_KEY=... TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=...
-python watch_agent.py --dry-run --day monday   # preview, send nothing
+python watch_agent.py --preview                # see the whole week's picks, send nothing
+python watch_agent.py --dry-run --day monday   # one day, send nothing
 python watch_agent.py                          # send for real
 ```
 
@@ -65,6 +73,7 @@ python watch_agent.py                          # send for real
 | `min_duration_minutes` | `0` allows Shorts |
 | `creators_only` | `true` = only your listed creators; `false` = fill gaps with search |
 | `match_theme` | `true` = search each creator's channel for the day's `keywords`; `false` = just their latest uploads |
+| `deliver` | `[telegram]`, `[email]`, or `[telegram, email]` |
 
 ## Design notes
 
@@ -76,7 +85,7 @@ python watch_agent.py                          # send for real
 ## Ideas for later
 
 - One-line "why this video" note via a free LLM tier
-- WhatsApp, SMS or email delivery
+- WhatsApp or SMS delivery
 - A hosted version where you just text the bot your weekly plan
 
 ## License

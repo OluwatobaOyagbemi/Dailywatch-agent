@@ -1,0 +1,71 @@
+# ─────────────────────────────────────────────────────────────
+# Daily Watch Agent — edit this file, nothing else.
+# ─────────────────────────────────────────────────────────────
+
+# How many videos to send each day
+videos_per_day: 5
+
+# Only consider videos published within this many days (keeps it fresh)
+max_video_age_days: 60
+
+# Ignore videos shorter than this (filters out Shorts). Set to 0 to allow all.
+min_duration_minutes: 4
+
+# true  = only send videos from the creators you list (never strangers from search)
+# false = fill any gaps with the search phrases below
+creators_only: true
+
+# true  = search each creator's channel for the day's theme (uses `keywords`)
+# false = just take each creator's latest uploads, whatever they're about
+match_theme: true
+
+# Where to send. One or both of: telegram, email  (see README for the secrets each needs)
+deliver: [telegram]
+
+# Your weekly plan. One entry per weekday.
+#   theme    - shown as the message header
+#   keywords - words to look for in each creator's videos (defaults to the theme)
+#   creators - YouTube channel handles (the part after @ in the channel URL)
+#   search   - fallback search phrases, used only when creators_only is false
+days:
+  monday:
+    theme: Learn a Skill
+    keywords: "tutorial how to beginner"
+    creators: [freecodecamp, TED]
+    search: ["learn a new skill"]
+
+  tuesday:
+    theme: Leadership
+    keywords: "leadership leader team"
+    creators: [MaxwellLeadershipOfficial, TED]
+    search: ["leadership principles"]
+
+  wednesday:
+    theme: Health and Fitness
+    keywords: "workout fitness health"
+    creators: [TED]
+    search: ["beginner workout"]
+
+  thursday:
+    theme: Money
+    keywords: "money finance investing budget"
+    creators: [marktilbury]
+    search: ["personal finance basics"]
+
+  friday:
+    theme: Public Speaking
+    keywords: "public speaking storytelling presentation"
+    creators: [TED, TEDx]
+    search: ["public speaking tips"]
+
+  saturday:
+    theme: Hobby
+    keywords: "lesson tutorial"
+    creators: [andycrowley]
+    search: ["beginner guitar lesson"]
+
+  sunday:
+    theme: Reflection
+    keywords: "mindset purpose reflection"
+    creators: [TED]
+    search: ["mindset talk"]

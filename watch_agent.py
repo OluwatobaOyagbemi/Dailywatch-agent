@@ -223,9 +223,10 @@ def pick_videos(day_cfg, cfg, api_key, sent):
 
 
 def build_message(theme, weekday, videos):
+    """Telegram (Markdown) version."""
     lines = [f"🎯 *{weekday.title()} — {theme}*", ""]
     if not videos:
-        lines.append("No new videos today. Try adding more creators or search terms to config.yaml.")
+        lines.append("No new videos today. Try adding more creators to config.yaml.")
         return "\n".join(lines)
     for i, v in enumerate(videos, 1):
         title = v["title"].replace("*", "").replace("_", "").replace("[", "(").replace("]", ")")
@@ -233,6 +234,25 @@ def build_message(theme, weekday, videos):
         lines.append(f"   _{v['channel']}_")
     return "\n".join(lines)
 
+
+def build_html(theme, weekday, videos):
+    """Email (HTML) version."""
+    import html
+    rows = "".join(
+        f'<li style="margin:0 0 14px"><a href="https://youtu.be/{v["id"]}" '
+        f'style="font-size:16px;color:#1a5fb4;text-decoration:none">{html.escape(v["title"])}</a>'
+        f'<br><span style="color:#666;font-size:13px">{html.escape(v["channel"])}</span></li>'
+        for v in videos
+    ) or '<li>No new videos today. Try adding more creators to config.yaml.</li>'
+    return (f'<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:560px;'
+            f'margin:0 auto;padding:24px;color:#222">'
+            f'<h2 style="margin:0 0 4px">🎯 {weekday.title()} — {html.escape(theme)}</h2>'
+            f'<p style="margin:0 0 20px;color:#666">Your picks for today.</p>'
+            f'<ol style="padding-left:20px">{rows}</ol>'
+            f'<p style="margin-top:28px;font-size:12px;color:#999">Sent by Daily Watch Agent</p></div>')
+
+
+# ── delivery ─────────────────────────────────────────────────────────────────
 
 def send_telegram(text, token, chat_id):
     r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
@@ -242,47 +262,102 @@ def send_telegram(text, token, chat_id):
     r.raise_for_status()
 
 
+def send_email(subject, html_body, plain_body):
+    """SMTP email. Works with Gmail (app password), Outlook, or any SMTP host."""
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    user = os.environ["SMTP_USER"]
+    password = os.environ["SMTP_PASS"]
+    to = os.environ.get("EMAIL_TO", user)
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = user
+    msg["To"] = to
+    msg.attach(MIMEText(plain_body, "plain"))
+    msg.attach(MIMEText(html_body, "html"))
+    with smtplib.SMTP(host, port, timeout=30) as s:
+        s.starttls()
+        s.login(user, password)
+        s.sendmail(user, [to], msg.as_string())
+
+
+def deliver(cfg, theme, weekday, videos):
+    """Send via every channel listed in config `deliver:` (default: telegram)."""
+    channels = cfg.get("deliver", ["telegram"])
+    if isinstance(channels, str):
+        channels = [channels]
+    text = build_message(theme, weekday, videos)
+    delivered = []
+    for ch in channels:
+        if ch == "telegram":
+            token, chat_id = os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
+            if not token or not chat_id:
+                print("  ! telegram: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set — skipping", file=sys.stderr)
+                continue
+            send_telegram(text, token, chat_id)
+            delivered.append("telegram")
+        elif ch == "email":
+            if not os.environ.get("SMTP_USER") or not os.environ.get("SMTP_PASS"):
+                print("  ! email: SMTP_USER / SMTP_PASS not set — skipping", file=sys.stderr)
+                continue
+            plain = text.replace("*", "").replace("_", "")
+            send_email(f"{weekday.title()} — {theme}", build_html(theme, weekday, videos), plain)
+            delivered.append("email")
+        else:
+            print(f"  ! unknown delivery channel '{ch}'", file=sys.stderr)
+    return delivered
+
+
+# ── entry point ──────────────────────────────────────────────────────────────
+
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description="Send today's themed YouTube picks.")
     ap.add_argument("--day", help="weekday name, e.g. monday (default: today)")
-    ap.add_argument("--dry-run", action="store_true", help="print, don't send or record")
+    ap.add_argument("--dry-run", action="store_true", help="print today's picks, send nothing")
+    ap.add_argument("--preview", action="store_true", help="print the whole week's picks, send nothing")
     ap.add_argument("--force", action="store_true", help="send even if already sent today")
     args = ap.parse_args()
+
+    cfg = load_config()
+    api_key = os.environ.get("YOUTUBE_API_KEY")
+    if not api_key:
+        sys.exit("YOUTUBE_API_KEY is not set")
+    sent = load_sent()
+
+    if args.preview:
+        for weekday, day_cfg in cfg["days"].items():
+            print(f"\n{'='*60}\n{weekday.title()}: {day_cfg['theme']}")
+            videos = pick_videos(day_cfg, cfg, api_key, sent)
+            print(build_message(day_cfg["theme"], weekday, videos).replace("*", "").replace("_", ""))
+        return
 
     today = datetime.now().strftime("%Y-%m-%d")
     if not args.dry_run and not args.force and LAST_PATH.exists() and LAST_PATH.read_text().strip() == today:
         print(f"Already sent today ({today}); skipping. Use --force to resend.")
         return
 
-    cfg = load_config()
     weekday = (args.day or datetime.now().strftime("%A")).lower()
     day_cfg = cfg["days"].get(weekday)
     if not day_cfg:
         sys.exit(f"No entry for '{weekday}' in config.yaml")
 
-    api_key = os.environ.get("YOUTUBE_API_KEY")
-    if not api_key:
-        sys.exit("YOUTUBE_API_KEY is not set")
-
-    sent = load_sent()
     print(f"{weekday.title()}: {day_cfg['theme']}")
     videos = pick_videos(day_cfg, cfg, api_key, sent)
-    msg = build_message(day_cfg["theme"], weekday, videos)
 
     if args.dry_run:
-        print("\n" + msg)
+        print("\n" + build_message(day_cfg["theme"], weekday, videos))
         return
 
-    token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
-    if not token or not chat_id:
-        sys.exit("TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set")
-
-    send_telegram(msg, token, chat_id)
+    delivered = deliver(cfg, day_cfg["theme"], weekday, videos)
+    if not delivered:
+        sys.exit("Nothing was delivered — check your secrets / `deliver:` setting.")
     sent.update(v["id"] for v in videos)
     save_sent(sent)
     LAST_PATH.write_text(today + "\n")
-    print(f"Sent {len(videos)} video(s).")
+    print(f"Sent {len(videos)} video(s) via {', '.join(delivered)}.")
 
 
 if __name__ == "__main__":

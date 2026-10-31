@@ -19,6 +19,9 @@ creators_only: true
 # false = just take each creator's latest uploads, whatever they're about
 match_theme: true
 
+# Where to send. One or both of: telegram, email  (see README for the secrets each needs)
+deliver: [telegram]
+
 # Your weekly plan. One entry per weekday.
 #   theme    - shown as the message header
 #   keywords - words to look for in each creator's videos (defaults to the theme)
