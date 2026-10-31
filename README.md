@@ -64,10 +64,12 @@ python watch_agent.py                          # send for real
 | `max_video_age_days` | ignore uploads older than this |
 | `min_duration_minutes` | `0` allows Shorts |
 | `creators_only` | `true` = only your listed creators; `false` = fill gaps with search |
+| `match_theme` | `true` = search each creator's channel for the day's `keywords`; `false` = just their latest uploads |
 
 ## Design notes
 
-- **Creators before search.** Channel uploads cost ~2 API units; a search costs 100. Search is off by default so the message is never padded with strangers.
+- **Theme-matched, creator-scoped.** Each day searches *inside* your chosen creators' channels for that day's keywords, then round-robins across creators so one prolific channel can't crowd out the rest. If a creator has nothing on-theme, their latest upload fills in.
+- **No strangers.** General search is off by default; the message only ever contains creators you listed.
 - **A bad channel never kills the run.** Unknown or unreadable handles are logged and skipped.
 - **State lives in the repo.** `sent.json` is committed back by the workflow, so there's no database and nothing to host.
 

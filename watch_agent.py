@@ -70,14 +70,19 @@ def yt_get(endpoint, api_key, **params):
 
 # ── YouTube lookups ──────────────────────────────────────────────────────────
 
-def channel_uploads_playlist(handle, api_key):
-    """Resolve @handle -> uploads playlist id (cost: 1 unit)."""
+def resolve_channel(handle, api_key):
+    """Resolve @handle -> (channel_id, uploads_playlist_id). Cost: 1 unit."""
     data = yt_get("channels", api_key, part="contentDetails", forHandle=handle)
     items = data.get("items", [])
     if not items:
         print(f"  ! channel @{handle} not found", file=sys.stderr)
-        return None
-    return items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
+        return None, None
+    it = items[0]
+    return it["id"], it["contentDetails"]["relatedPlaylists"]["uploads"]
+
+
+def channel_uploads_playlist(handle, api_key):
+    return resolve_channel(handle, api_key)[1]
 
 
 def recent_from_channel(handle, api_key, cutoff, limit=10):
@@ -124,6 +129,30 @@ def search_videos(query, api_key, cutoff, limit=5):
     return out
 
 
+def theme_from_channel(handle, query, api_key, cutoff, limit=8):
+    """Videos from one creator that match the day's theme (cost: ~101 units)."""
+    try:
+        channel_id, _ = resolve_channel(handle, api_key)
+        if not channel_id:
+            return []
+        data = yt_get("search", api_key, part="snippet", channelId=channel_id, q=query,
+                      type="video", order="date", maxResults=limit,
+                      publishedAfter=cutoff.strftime("%Y-%m-%dT%H:%M:%SZ"))
+    except requests.HTTPError as e:
+        print(f"  ! theme search failed for @{handle}: {e.response.status_code} — skipping", file=sys.stderr)
+        return []
+    out = []
+    for it in data.get("items", []):
+        sn = it["snippet"]
+        out.append({
+            "id": it["id"]["videoId"],
+            "title": sn["title"],
+            "channel": sn["channelTitle"],
+            "published": datetime.fromisoformat(sn["publishedAt"].replace("Z", "+00:00")),
+        })
+    return out
+
+
 def filter_by_duration(videos, api_key, min_minutes):
     """Drop Shorts / very short clips (cost: 1 unit per 50 videos)."""
     if not videos or min_minutes <= 0:
@@ -142,24 +171,42 @@ def pick_videos(day_cfg, cfg, api_key, sent):
     cutoff = datetime.now(timezone.utc) - timedelta(days=cfg.get("max_video_age_days", 60))
     min_dur = cfg.get("min_duration_minutes", 0)
 
-    pool = []
     seen = set()
+    match_theme = cfg.get("match_theme", True)
+    keywords = day_cfg.get("keywords") or day_cfg["theme"]
 
-    def add(videos):
+    def fresh(videos):
+        out = []
         for v in videos:
             if v["id"] in sent or v["id"] in seen:
                 continue
             seen.add(v["id"])
-            pool.append(v)
+            out.append(v)
+        return out
 
-    # 1) creators first — cheap and on-brand
+    # 1) one list per creator: theme-matched videos, else their latest uploads
+    per_creator = []
     for handle in day_cfg.get("creators", []):
-        print(f"  fetching @{handle}")
-        add(recent_from_channel(handle, api_key, cutoff))
+        vids = []
+        if match_theme:
+            print(f"  @{handle}: searching for '{keywords}'")
+            vids = fresh(theme_from_channel(handle, keywords, api_key, cutoff))
+        if not vids:
+            print(f"  @{handle}: no theme match, using latest uploads")
+            vids = fresh(recent_from_channel(handle, api_key, cutoff))
+        vids = filter_by_duration(vids, api_key, min_dur)
+        vids.sort(key=lambda v: v["published"], reverse=True)
+        if vids:
+            per_creator.append(vids)
 
-    pool = filter_by_duration(pool, api_key, min_dur)
+    # 2) round-robin so every creator gets a turn
+    pool = []
+    while len(pool) < n and any(per_creator):
+        for lst in per_creator:
+            if lst and len(pool) < n:
+                pool.append(lst.pop(0))
 
-    # 2) fallback searches only if allowed and we still need more
+    # 3) general search only if allowed and still short
     search_terms = [] if cfg.get("creators_only", False) else day_cfg.get("search", [])
     for q in search_terms:
         if len(pool) >= n:
@@ -170,12 +217,8 @@ def pick_videos(day_cfg, cfg, api_key, sent):
         except requests.HTTPError as e:
             print(f"  ! search failed: {e.response.status_code} — skipping", file=sys.stderr)
             continue
-        extra = filter_by_duration([v for v in extra if v["id"] not in seen and v["id"] not in sent],
-                                   api_key, min_dur)
-        add(extra)
+        pool.extend(filter_by_duration(fresh(extra), api_key, min_dur))
 
-    # newest first, then cap
-    pool.sort(key=lambda v: v["published"], reverse=True)
     return pool[:n]
 
 
