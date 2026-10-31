@@ -20,7 +20,7 @@ creators_only: true
 match_theme: true
 
 # Where to send. One or both of: telegram, email  (see README for the secrets each needs)
-deliver: [telegram]
+deliver: [telegram, email]
 
 # Your weekly plan. One entry per weekday.
 #   theme    - shown as the message header
