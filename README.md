@@ -8,7 +8,7 @@ Built by [Oluwatoba Oyagbemi](https://www.linkedin.com/in/oluwatoba-oyagbemi-24b
 
 ## Why
 
-I had a weekly plan — communication on Mondays, leadership on Tuesdays, finance on Wednesdays — and I never followed it, because following it meant opening YouTube and getting pulled somewhere else.
+I had a weekly plan — speaking on Mondays, leadership on Tuesdays, finance on Thursdays — and I never followed it, because following it meant opening YouTube and getting pulled somewhere else.
 
 My first instinct was to build an app with calendar sync and push notifications. I scoped that down to the smallest thing that would actually change my behaviour: a config file, one script, and a scheduled job that puts the right videos in front of me before I've opened anything else.
 
