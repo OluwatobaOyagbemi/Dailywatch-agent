@@ -27,8 +27,8 @@ match_theme: true
 days:
   monday:
     theme: Public Speaking and Communication
-    keywords: "speaking communication speak words"
-    creators: [femi_lazarus, MaxwellLeadershipOfficial, munroeglobal]
+    keywords: "public speaking storytelling presentation communication"
+    creators: [TED, philipp-humm, TEDx]   # add Joyce Daniela's handle here once confirmed
     search: ["public speaking skills", "how to communicate confidently"]
 
   tuesday:
@@ -45,14 +45,14 @@ days:
 
   thursday:
     theme: Finance, Money and Business
-    keywords: "money finance business wealth"
-    creators: [PastorPoju, SamAdeyemiOfficial, femi_lazarus, munroeglobal]
+    keywords: "money finance business wealth investing"
+    creators: [marktilbury, PastorPoju]
     search: ["biblical finance", "building a business"]
 
   friday:
     theme: Men's Conference and Fatherhood
-    keywords: "men fatherhood father man"
-    creators: [femi_lazarus, PastorPoju, munroeglobal, KoinoniaGlobal]
+    keywords: "men fatherhood father man manhood"
+    creators: [munroeglobal, femi_lazarus]
     search: ["men's conference", "fatherhood sermon"]
 
   saturday:
