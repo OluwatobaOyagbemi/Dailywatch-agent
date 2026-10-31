@@ -28,13 +28,13 @@ days:
   monday:
     theme: Public Speaking and Communication
     keywords: "public speaking storytelling presentation communication"
-    creators: [TED, philipp-humm, TEDx]   # add Joyce Daniela's handle here once confirmed
+    creators: [TED, philipp-humm, JoyceDaniels, TEDx]
     search: ["public speaking skills", "how to communicate confidently"]
 
   tuesday:
     theme: Mentorship and Leadership
     keywords: "leadership leader mentor"
-    creators: [MaxwellLeadershipOfficial, femi_lazarus, munroeglobal, SamAdeyemiOfficial]
+    creators: [MaxwellLeadershipOfficial, femi_lazarus, munroeglobal, SamAdeyemiTV]
     search: ["leadership principles", "mentorship"]
 
   wednesday:
