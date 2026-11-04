@@ -18,6 +18,7 @@ Usage:
 """
 
 import argparse
+import html
 import json
 import os
 import re
@@ -104,7 +105,7 @@ def recent_from_channel(handle, api_key, cutoff, limit=10):
             continue
         out.append({
             "id": sn["resourceId"]["videoId"],
-            "title": sn["title"],
+            "title": html.unescape(sn["title"]),
             "channel": sn["channelTitle"],
             "published": published,
         })
@@ -122,7 +123,7 @@ def search_videos(query, api_key, cutoff, limit=5):
         sn = it["snippet"]
         out.append({
             "id": it["id"]["videoId"],
-            "title": sn["title"],
+            "title": html.unescape(sn["title"]),
             "channel": sn["channelTitle"],
             "published": datetime.fromisoformat(sn["publishedAt"].replace("Z", "+00:00")),
         })
@@ -146,7 +147,7 @@ def theme_from_channel(handle, query, api_key, cutoff, limit=8):
         sn = it["snippet"]
         out.append({
             "id": it["id"]["videoId"],
-            "title": sn["title"],
+            "title": html.unescape(sn["title"]),
             "channel": sn["channelTitle"],
             "published": datetime.fromisoformat(sn["publishedAt"].replace("Z", "+00:00")),
         })
@@ -192,6 +193,9 @@ def pick_videos(day_cfg, cfg, api_key, sent):
             print(f"  @{handle}: searching for '{keywords}'")
             vids = fresh(theme_from_channel(handle, keywords, api_key, cutoff))
         if not vids:
+            if match_theme and not cfg.get("fallback_to_latest", False):
+                print(f"  @{handle}: no theme match — skipping (fallback_to_latest is off)")
+                continue
             print(f"  @{handle}: no theme match, using latest uploads")
             vids = fresh(recent_from_channel(handle, api_key, cutoff))
         vids = filter_by_duration(vids, api_key, min_dur)
@@ -237,7 +241,6 @@ def build_message(theme, weekday, videos):
 
 def build_html(theme, weekday, videos):
     """Email (HTML) version."""
-    import html
     rows = "".join(
         f'<li style="margin:0 0 14px"><a href="https://youtu.be/{v["id"]}" '
         f'style="font-size:16px;color:#1a5fb4;text-decoration:none">{html.escape(v["title"])}</a>'

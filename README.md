@@ -73,11 +73,12 @@ python watch_agent.py                          # send for real
 | `min_duration_minutes` | `0` allows Shorts |
 | `creators_only` | `true` = only your listed creators; `false` = fill gaps with search |
 | `match_theme` | `true` = search each creator's channel for the day's `keywords`; `false` = just their latest uploads |
+| `fallback_to_latest` | `false` = skip a creator with nothing on-theme today; `true` = send their latest upload anyway |
 | `deliver` | `[telegram]`, `[email]`, or `[telegram, email]` |
 
 ## Design notes
 
-- **Theme-matched, creator-scoped.** Each day searches *inside* your chosen creators' channels for that day's keywords, then round-robins across creators so one prolific channel can't crowd out the rest. If a creator has nothing on-theme, their latest upload fills in.
+- **Theme-matched, creator-scoped.** Each day searches *inside* your chosen creators' channels for that day's keywords, then round-robins across creators so one prolific channel can't crowd out the rest. A creator with nothing on-theme is left out that day (or, with `fallback_to_latest: true`, their latest upload fills in).
 - **No strangers.** General search is off by default; the message only ever contains creators you listed.
 - **A bad channel never kills the run.** Unknown or unreadable handles are logged and skipped.
 - **State lives in the repo.** `sent.json` is committed back by the workflow, so there's no database and nothing to host.

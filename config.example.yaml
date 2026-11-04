@@ -19,6 +19,11 @@ creators_only: true
 # false = just take each creator's latest uploads, whatever they're about
 match_theme: true
 
+# When a creator has nothing on today's theme:
+#   false = leave them out that day (message may be shorter, but always on-topic)
+#   true  = send their latest upload anyway
+fallback_to_latest: false
+
 # Where to send. One or both of: telegram, email  (see README for the secrets each needs)
 deliver: [telegram]
 
