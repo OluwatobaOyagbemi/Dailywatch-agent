@@ -1,5 +1,8 @@
 # Daily Watch Agent
 
+[![Tests](https://github.com/OluwatobaOyagbemi/Dailywatch-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/OluwatobaOyagbemi/Dailywatch-agent/actions/workflows/tests.yml)
+[![Daily Watch](https://github.com/OluwatobaOyagbemi/Dailywatch-agent/actions/workflows/daily.yml/badge.svg)](https://github.com/OluwatobaOyagbemi/Dailywatch-agent/actions/workflows/daily.yml)
+
 **A tiny automation that sends you a few YouTube videos every morning, matched to a weekly growth theme you choose.** No app, no dashboard, no cost — one Telegram message or email at noon from creators you picked, never a repeat.
 
 Built by [Oluwatoba Oyagbemi](https://www.linkedin.com/in/oluwatoba-oyagbemi-24ba52323/) · Python · YouTube Data API · GitHub Actions · Telegram / Email
@@ -63,6 +66,15 @@ python watch_agent.py --preview                # see the whole week's picks, sen
 python watch_agent.py --dry-run --day monday   # one day, send nothing
 python watch_agent.py                          # send for real
 ```
+
+## Tests
+
+```bash
+pip install pytest
+pytest -q
+```
+
+Ten offline tests cover the picking logic (round-robin, no repeats, Shorts filter, off-theme skipping, missing channels), HTML-entity decoding, and message sanitising for Telegram and email. They run on every push.
 
 ## Settings (`config.yaml`)
 
