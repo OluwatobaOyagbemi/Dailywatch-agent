@@ -24,9 +24,10 @@ match_theme: true
 #   true  = send their latest upload anyway
 fallback_to_latest: false
 
-# If a whole day comes up empty (nothing on-theme from anyone), send each
-# creator's latest uploads instead of an empty message, however old they are.
-fill_empty_day: true
+# When a creator has nothing recent on today's theme, search their older videos
+# for the theme too (newest first, never a repeat). Keeps every creator on-topic
+# and in the message even on quiet weeks.
+older_on_theme: true
 
 # ── Anti-doomscroll ──────────────────────────────────────────
 # true = links open YouTube's bare player (no recommendations, comments or Shorts

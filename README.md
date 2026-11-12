@@ -107,7 +107,7 @@ Offline tests use a fake YouTube API, so no key or network is needed. They cover
 | `creators_only` | `true` = only your listed creators; `false` = fill gaps with search |
 | `match_theme` | `true` = search each creator's channel for the day's `keywords`; `false` = just their latest uploads |
 | `fallback_to_latest` | `false` = skip a creator with nothing on-theme today; `true` = send their latest upload anyway |
-| `fill_empty_day` | `true` = if the whole day comes up empty, send each creator's latest uploads instead (any age, never repeats) |
+| `older_on_theme` | `true` = if a creator has nothing recent on today's theme, pick their newest older video on that theme instead (shown with its upload month) |
 | `distraction_free` | `true` = links open the bare player with no feed, comments or autoplay |
 | `daily_minutes_budget` | cap on the day's total watch time in minutes (`0` = no cap) |
 | `prompt` | reflection line at the end of each message (a day's `prompt:` overrides it) |
@@ -115,7 +115,7 @@ Offline tests use a fake YouTube API, so no key or network is needed. They cover
 
 ## Design notes
 
-- **Theme-matched, creator-scoped.** Each day searches *inside* your chosen creators' channels for that day's keywords, then round-robins across creators so one prolific channel can't crowd out the rest. A creator with nothing on-theme is left out that day (or, with `fallback_to_latest: true`, their latest upload fills in).
+- **Theme-matched, creator-scoped.** Each day searches *inside* your chosen creators' channels for that day's keywords, then round-robins across creators so one prolific channel can't crowd out the rest. A creator with nothing recent on-theme gets their newest *older* on-theme video instead (`older_on_theme`), so the message stays on topic. Only if they've never covered the theme are they left out (or, with `fallback_to_latest: true`, their latest upload fills in).
 - **No strangers.** General search is off by default; the message only ever contains creators you listed.
 - **A bad channel never kills the run.** Unknown or unreadable handles are logged and skipped.
 - **State lives in the repo.** `sent.json` is committed back by the workflow, so there's no database and nothing to host.

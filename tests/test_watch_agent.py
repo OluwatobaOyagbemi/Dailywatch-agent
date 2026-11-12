@@ -104,7 +104,7 @@ def test_creators_only_blocks_general_search():
         calls.append((endpoint, p.get("channelId")))
         return inner(endpoint, api_key, **p)
     w.yt_get = spy
-    vids = w.pick_videos(DAY, cfg(fill_empty_day=False), "k", set())
+    vids = w.pick_videos(DAY, cfg(), "k", set())
     assert vids == []
     assert all(ch is not None for e, ch in calls if e == "search"), "general search must not run"
 
@@ -190,26 +190,43 @@ def test_durations_parse():
     assert w.fmt_minutes(95) == "1h 35m" and w.fmt_minutes(12.4) == "12 min"
 
 
-def test_empty_day_falls_back_to_latest_uploads():
-    w.yt_get = fake_yt(empty=("A", "B"))
+def only_old_on_theme(old_for=("B",)):
+    """Creators in `old_for` have nothing recent on-theme, but older on-theme videos exist."""
+    inner = fake_yt()
+    def _get(endpoint, api_key, **p):
+        if endpoint == "search" and p["channelId"][2:] in old_for:
+            if "publishedAfter" in p:
+                return {"items": []}
+            ch = p["channelId"][2:]
+            return {"items": [{"id": {"videoId": f"{ch}_old{i}"},
+                               "snippet": {"title": f"{ch} old talk {i}", "channelTitle": ch,
+                                           "publishedAt": f"202{3 - i}-03-01T00:00:00Z"}}
+                              for i in range(2)]}
+        return inner(endpoint, api_key, **p)
+    return _get
+
+
+def test_creator_with_nothing_recent_gets_older_on_theme_video():
+    w.yt_get = only_old_on_theme()
     vids = w.pick_videos(DAY, cfg(), "k", set())
-    assert {v["id"] for v in vids} == {"A_latest", "B_latest"}
+    assert [v["id"] for v in vids] == ["A_0", "B_old0", "A_1", "B_old1", "A_2"]
+    assert not any(v["id"].endswith("_latest") for v in vids), "fallback must stay on-theme"
+
+
+def test_older_on_theme_skips_already_sent():
+    w.yt_get = only_old_on_theme()
+    vids = w.pick_videos(DAY, cfg(), "k", {"B_old0"})
+    assert "B_old0" not in {v["id"] for v in vids} and "B_old1" in {v["id"] for v in vids}
+
+
+def test_older_pick_shows_upload_month():
+    w.yt_get = only_old_on_theme(old_for=("A", "B"))
+    vids = w.pick_videos(DAY, cfg(), "k", set())
     msg = w.build_message("Leadership", "monday", vids)
-    assert "latest from your creators" in msg
+    assert "· 12 min · Mar 2023" in msg
 
 
-def test_empty_day_fallback_ignores_age_limit_but_not_sent_history():
-    inner = fake_yt(empty=("A", "B"))
-    def old(endpoint, api_key, **p):
-        out = inner(endpoint, api_key, **p)
-        if endpoint == "playlistItems":
-            out["items"][0]["snippet"]["publishedAt"] = "2020-01-01T00:00:00Z"
-        return out
-    w.yt_get = old
-    vids = w.pick_videos(DAY, cfg(), "k", {"B_latest"})
-    assert [v["id"] for v in vids] == ["A_latest"]
-
-
-def test_empty_day_fallback_can_be_turned_off():
-    w.yt_get = fake_yt(empty=("A", "B"))
-    assert w.pick_videos(DAY, cfg(fill_empty_day=False), "k", set()) == []
+def test_older_on_theme_can_be_turned_off():
+    w.yt_get = only_old_on_theme()
+    vids = w.pick_videos(DAY, cfg(older_on_theme=False), "k", set())
+    assert all(v["channel"] == "A" for v in vids)

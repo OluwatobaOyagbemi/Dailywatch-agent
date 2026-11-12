@@ -141,14 +141,17 @@ def search_videos(query, api_key, cutoff, limit=5):
 
 
 def theme_from_channel(handle, query, api_key, cutoff, limit=8):
-    """Videos from one creator that match the day's theme (cost: ~101 units)."""
+    """Videos from one creator that match the day's theme, newest first (cost: ~101 units).
+    cutoff=None searches the creator's whole back catalogue."""
     try:
         channel_id, _ = resolve_channel(handle, api_key)
         if not channel_id:
             return []
-        data = yt_get("search", api_key, part="snippet", channelId=channel_id, q=query,
-                      type="video", order="date", maxResults=limit,
-                      publishedAfter=cutoff.strftime("%Y-%m-%dT%H:%M:%SZ"))
+        params = dict(part="snippet", channelId=channel_id, q=query,
+                      type="video", order="date", maxResults=limit)
+        if cutoff is not None:
+            params["publishedAfter"] = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
+        data = yt_get("search", api_key, **params)
     except requests.HTTPError as e:
         print(f"  ! theme search failed for @{handle}: {e.response.status_code} — skipping", file=sys.stderr)
         return []
@@ -222,21 +225,28 @@ def pick_videos(day_cfg, cfg, api_key, sent):
             out.append(v)
         return out
 
-    # 1) one list per creator: theme-matched videos (else, optionally, latest uploads)
+    # 1) one list per creator: recent on-theme videos; if none, that creator's older
+    #    on-theme videos; if still none (and allowed), their latest uploads
     per_creator = []
     for handle in day_cfg.get("creators") or []:
         handle = str(handle).lstrip("@")
         vids = []
         if match_theme:
             print(f"  @{handle}: searching for '{keywords}'")
-            vids = fresh(theme_from_channel(handle, keywords, api_key, cutoff))
+            vids = add_details(fresh(theme_from_channel(handle, keywords, api_key, cutoff)),
+                               api_key, min_dur)
+            if not vids and cfg.get("older_on_theme", True):
+                print(f"  @{handle}: nothing recent on-theme — searching their older videos")
+                vids = add_details(fresh(theme_from_channel(handle, keywords, api_key, None, limit=25)),
+                                   api_key, min_dur)
+                for v in vids:
+                    v["older"] = True
         if not vids:
             if match_theme and not cfg.get("fallback_to_latest", False):
                 print(f"  @{handle}: no theme match — skipping (fallback_to_latest is off)")
                 continue
             print(f"  @{handle}: using latest uploads")
-            vids = fresh(recent_from_channel(handle, api_key, cutoff))
-        vids = add_details(vids, api_key, min_dur)
+            vids = add_details(fresh(recent_from_channel(handle, api_key, cutoff)), api_key, min_dur)
         vids.sort(key=lambda v: v["published"], reverse=True)
         if vids:
             per_creator.append(vids)
@@ -263,33 +273,7 @@ def pick_videos(day_cfg, cfg, api_key, sent):
         candidates.extend(add_details(fresh(extra), api_key, min_dur))
         pool = select_within_budget(candidates, n, budget)
 
-    # 4) still nothing? rather than an empty message, send the latest uploads from
-    #    today's creators — ignoring the age limit so quiet channels still count
-    if not pool and cfg.get("fill_empty_day", True):
-        print("  nothing on-theme today — falling back to each creator's latest uploads")
-        pool = latest_from_creators(day_cfg, api_key, fresh, min_dur, n, budget)
-
     return pool
-
-
-def latest_from_creators(day_cfg, api_key, fresh, min_dur, n, budget):
-    no_age_limit = datetime(1970, 1, 1, tzinfo=timezone.utc)
-    per_creator = []
-    for handle in day_cfg.get("creators") or []:
-        handle = str(handle).lstrip("@")
-        vids = add_details(fresh(recent_from_channel(handle, api_key, no_age_limit, limit=25)),
-                           api_key, min_dur)
-        vids.sort(key=lambda v: v["published"], reverse=True)
-        for v in vids:
-            v["fallback"] = True
-        if vids:
-            per_creator.append(vids)
-    candidates = []
-    while any(per_creator):
-        for lst in per_creator:
-            if lst:
-                candidates.append(lst.pop(0))
-    return select_within_budget(candidates, n, budget)
 
 
 # ── messages ─────────────────────────────────────────────────────────────────
@@ -312,11 +296,16 @@ def day_prompt(day_cfg, cfg):
 
 
 EMPTY = "Nothing new from your creators today. Add a creator or two in config.yaml."
-FALLBACK_NOTE = "Nothing on today's theme, so here's the latest from your creators."
 
 
-def is_fallback(videos):
-    return bool(videos) and all(v.get("fallback") for v in videos)
+def video_meta(v):
+    """'12 min', plus the upload month for older picks: '12 min · Mar 2024'."""
+    parts = []
+    if v.get("minutes"):
+        parts.append(fmt_minutes(v["minutes"]))
+    if v.get("older") and v.get("published"):
+        parts.append(v["published"].strftime("%b %Y"))
+    return " · ".join(parts)
 
 
 def build_message(theme, weekday, videos, cfg=None, day_cfg=None):
@@ -325,12 +314,9 @@ def build_message(theme, weekday, videos, cfg=None, day_cfg=None):
     lines = [f"🎯 <b>{e(weekday.title())} — {e(theme)}</b>"]
     if not videos:
         return "\n".join(lines + ["", EMPTY])
-    lines.append(summary_line(videos))
-    if is_fallback(videos):
-        lines.append(f"<i>{e(FALLBACK_NOTE)}</i>")
-    lines.append("")
+    lines += [summary_line(videos), ""]
     for i, v in enumerate(videos, 1):
-        length = f" · {fmt_minutes(v['minutes'])}" if v.get("minutes") else ""
+        length = f" · {video_meta(v)}" if video_meta(v) else ""
         lines.append(f'{i}. <a href="{e(video_url(v, cfg))}">{e(v["title"])}</a>{e(length)}')
         lines.append(f"   <i>{e(v['channel'])}</i>")
     prompt = day_prompt(day_cfg, cfg)
@@ -344,12 +330,9 @@ def build_plain(theme, weekday, videos, cfg=None, day_cfg=None):
     lines = [f"🎯 {weekday.title()} — {theme}"]
     if not videos:
         return "\n".join(lines + ["", EMPTY])
-    lines.append(summary_line(videos))
-    if is_fallback(videos):
-        lines.append(FALLBACK_NOTE)
-    lines.append("")
+    lines += [summary_line(videos), ""]
     for i, v in enumerate(videos, 1):
-        length = f" ({fmt_minutes(v['minutes'])})" if v.get("minutes") else ""
+        length = f" ({video_meta(v)})" if video_meta(v) else ""
         lines.append(f"{i}. {v['title']}{length}")
         lines.append(f"   {v['channel']} — {video_url(v, cfg)}")
     prompt = day_prompt(day_cfg, cfg)
@@ -365,12 +348,10 @@ def build_html(theme, weekday, videos, cfg=None, day_cfg=None):
         f'<li style="margin:0 0 14px"><a href="{e(video_url(v, cfg))}" '
         f'style="font-size:16px;color:#1a5fb4;text-decoration:none">{e(v["title"])}</a>'
         f'<br><span style="color:#666;font-size:13px">{e(v["channel"])}'
-        f'{" · " + fmt_minutes(v["minutes"]) if v.get("minutes") else ""}</span></li>'
+        f'{" · " + e(video_meta(v)) if video_meta(v) else ""}</span></li>'
         for v in videos
     ) or f'<li>{EMPTY}</li>'
     sub = summary_line(videos) if videos else "Your picks for today."
-    if is_fallback(videos):
-        sub += " — " + FALLBACK_NOTE
     prompt = day_prompt(day_cfg, cfg)
     prompt_html = (f'<p style="margin:20px 0 0;padding:12px 14px;background:#f4f6fa;border-radius:8px">'
                    f'💭 {e(prompt)}</p>') if prompt and videos else ""
