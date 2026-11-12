@@ -24,14 +24,31 @@ match_theme: true
 #   true  = send their latest upload anyway
 fallback_to_latest: false
 
+# If a whole day comes up empty (nothing on-theme from anyone), send each
+# creator's latest uploads instead of an empty message, however old they are.
+fill_empty_day: true
+
+# ── Anti-doomscroll ──────────────────────────────────────────
+# true = links open YouTube's bare player (no recommendations, comments or Shorts
+#        feed). Videos whose creators block embedding fall back to normal links.
+distraction_free: true
+
+# Cap the day's total watch time in minutes (0 = no cap). Videos that would push
+# you over are skipped in favour of shorter ones.
+daily_minutes_budget: 45
+
+# Shown at the end of every message. Override per day with `prompt:` under that day.
+prompt: "Before you close this: write down one idea you'll use this week."
+
 # Where to send. One or both of: telegram, email  (see README for the secrets each needs)
 deliver: [telegram]
 
-# Your weekly plan. One entry per weekday.
+# Your weekly plan. One entry per weekday. Leave a day out to make it a rest day.
 #   theme    - shown as the message header
 #   keywords - words to look for in each creator's videos (defaults to the theme)
 #   creators - YouTube channel handles (the part after @ in the channel URL)
 #   search   - fallback search phrases, used only when creators_only is false
+#   prompt   - (optional) replaces the global prompt for that day
 days:
   monday:
     theme: Learn a Skill
@@ -74,3 +91,4 @@ days:
     keywords: "mindset purpose reflection"
     creators: [TED]
     search: ["mindset talk"]
+    prompt: "What's one thing from this week you want to keep doing?"
