@@ -95,7 +95,7 @@ pip install pytest
 pytest -q
 ```
 
-Offline tests use a fake YouTube API, so no key or network is needed. They cover the picking logic (round-robin, no repeats, Shorts filter, off-theme skipping, missing channels), the time budget, distraction-free links, message escaping for Telegram and email, delivery fallbacks and `--check`. They run on every push.
+Offline tests use a fake YouTube API, so no key or network is needed. They cover the picking logic (round-robin, no repeats, Shorts filter, off-theme skipping, missing channels), the time budget, distraction-free links, message escaping for Telegram and email, delivery fallbacks, `--check`, and every guardrail. They run on every push.
 
 ## Settings (`config.yaml`)
 
@@ -111,7 +111,28 @@ Offline tests use a fake YouTube API, so no key or network is needed. They cover
 | `distraction_free` | `true` = links open the bare player with no feed, comments or autoplay |
 | `daily_minutes_budget` | cap on the day's total watch time in minutes (`0` = no cap) |
 | `prompt` | reflection line at the end of each message (a day's `prompt:` overrides it) |
+| `blocked_words` | never send titles containing these words (`#shorts` is always blocked) |
+| `max_api_units` | hard cap on YouTube API units per run (default `5000` of the free 10,000/day) |
 | `deliver` | `[telegram]`, `[email]`, or `[telegram, email]`. If one channel fails, the others still send |
+
+## Guardrails
+
+All of these live in [`guardrails.py`](guardrails.py) and are covered by tests.
+
+**Input**
+- `config.yaml` is checked before anything runs: types, ranges (1–10 videos a day, at most 10 creators a day), weekday names, handle format and delivery channels. Every problem is listed in plain words. Typos get a suggestion (`videos_per_dya` → *did you mean `videos_per_day`?*). Broken YAML reports the line number.
+- Secrets are format-checked (bot token, chat ID, single email address, numeric port) before use.
+- YouTube responses are treated as untrusted. Malformed items are skipped, not fatal. Video IDs must use YouTube's URL-safe alphabet, so a link can only ever point at YouTube. Titles have control, zero-width and bidi-override characters removed, and are capped in length.
+
+**Output**
+- `blocked_words` (plus `#shorts`, always) are never sent.
+- Telegram messages are HTML-escaped and kept under the 4,096-character limit. Email subjects can't carry line breaks, so headers can't be injected.
+
+**Code**
+- Retries with backoff on rate limits, 5xx errors and network blips (YouTube and Telegram). If YouTube says the daily quota is used up, the run stops calling it.
+- `max_api_units` caps what one run can spend, and each run reports the units it used.
+- API keys, bot tokens and passwords are redacted from every warning and error. Unexpected errors print one clean line (`DEBUG=1` gives the full traceback).
+- `sent.json` and `last_sent.txt` are written atomically. A corrupt `sent.json` is moved to `sent.json.corrupt` instead of crashing or being silently overwritten.
 
 ## Design notes
 

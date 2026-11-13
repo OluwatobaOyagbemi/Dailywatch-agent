@@ -180,7 +180,7 @@ def test_check_reports_bad_handles_and_missing_secrets(monkeypatch, capsys):
                                                        "funday": {"theme": "x"}}}, "k")
     out = capsys.readouterr().out
     assert code == 1
-    assert "@missing not found" in out and "TELEGRAM_BOT_TOKEN" in out and "'funday'" in out
+    assert "@missing not found" in out and "TELEGRAM_BOT_TOKEN" in out and "funday" in out
     assert "rest days" in out
 
 
