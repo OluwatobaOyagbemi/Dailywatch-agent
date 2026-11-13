@@ -3,7 +3,7 @@ name: Tests
 on:
   push:
     branches: [main]
-    paths-ignore: ["sent.json", "last_sent.txt"]
+    paths-ignore: ["sent.json", "last_sent.txt", "docs/today.json"]
   pull_request:
 
 jobs:

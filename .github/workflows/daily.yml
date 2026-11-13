@@ -76,6 +76,7 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          WATCH_PAGE_URL: ${{ vars.WATCH_PAGE_URL }}   # optional; defaults to https://<owner>.github.io/<repo>/
           FORCE: ${{ inputs.force && '--force' || '' }}
         run: python watch_agent.py $FORCE
 
@@ -85,6 +86,7 @@ jobs:
           git config user.name "daily-watch-bot"
           git config user.email "bot@users.noreply.github.com"
           git add sent.json last_sent.txt
+          [ -f docs/today.json ] && git add docs/today.json        # today's session for the watch page
           [ -f sent.json.corrupt ] && git add sent.json.corrupt   # keep the backup if history was unreadable
           git diff --cached --quiet || git commit -m "chore: record sent videos $(date +%F)"
           git pull --rebase origin "${{ github.event.repository.default_branch }}"
