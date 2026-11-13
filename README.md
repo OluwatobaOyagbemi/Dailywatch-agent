@@ -50,7 +50,7 @@ Anyone can open the live page, plan their week and start using it straight away:
 1. Open the page. First-time visitors see **Plan your week**.
 2. For each day, type a theme and the creators you trust (the part after `@` in `youtube.com/@name`). Leave a day blank or tick *Rest day* to skip it. Optionally add words to look for and a small task.
 3. Save. Each day, open the page (or add it to your home screen) and you get that day's short list.
-4. Optional: in **Daily reminder**, pick a time and add one repeating event to Apple Calendar, Outlook or Google Calendar. It repeats only on your planned days, and tapping it opens the page, so today's list comes to you without an account or notifications permission.
+4. Optional: in **Daily reminder**, pick a time and add one repeating event to Apple Calendar, Outlook or Google Calendar. It repeats only on your planned days, and tapping it opens the page, so today's list comes to you without an account or notifications permission. Outlook users can also **Subscribe in Outlook**: the helper serves the reminder as a calendar link, so it lands in their Outlook account and the Outlook phone app.
 
 The plan is saved only in that browser. There's no account and no sign-up. To find videos, the page sends only that day's theme and creators to the Daily Watch helper service. Browser users don't get Telegram or email messages. For those, set up your own copy below.
 

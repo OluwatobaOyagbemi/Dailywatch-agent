@@ -621,7 +621,7 @@
   function startVisitor() {
     var today = localToday();
     els.crumbDay.textContent = titleCase(weekdayOf(today));
-    try { P.renderReminder($("reminder"), P.load(), location.origin + location.pathname); } catch (e) { /* optional */ }
+    try { P.renderReminder($("reminder"), P.load(), location.origin + location.pathname, HELPER); } catch (e) { /* optional */ }
     P.buildToday(P.load(), today, weekdayOf(today), HELPER).then(function (s) {
       if (s.rest) {
         emptyState(s, "Rest day", "No session today. Enjoy the time back, and come back tomorrow.");
