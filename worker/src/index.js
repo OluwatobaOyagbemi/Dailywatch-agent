@@ -78,7 +78,9 @@ async function buildSession(params, env, ctx) {
     let picks = onThemeRecent(feed, words, params.maxAgeDays);
     if (!picks.length && searches < MAX_SEARCHES) {
       searches += 1;
-      picks = (await searchOlder(channelId, params.keywords, env, ctx).catch(() => [])).map((v) => ({ ...v, older: true }));
+      const cutoff = Date.now() - params.maxAgeDays * 86400000;
+      picks = (await searchOlder(channelId, params.keywords, env, ctx).catch(() => []))
+        .map((v) => ({ ...v, older: Date.parse(v.published) < cutoff }));
     }
     if (!picks.length && params.fill) {
       picks = feed.slice(0, 3).map((v) => ({ ...v, latest: true }));

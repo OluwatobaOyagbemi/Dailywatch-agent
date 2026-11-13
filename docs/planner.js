@@ -23,7 +23,7 @@
       tuesday: { theme: "Leadership", keywords: "leadership leader team", creators: ["MaxwellLeadershipOfficial", "TED"], task: "Write down one leadership habit and practise it once today." },
       wednesday: { theme: "Health and fitness", keywords: "workout fitness health", creators: ["TED"], task: "Do a 15-minute workout." },
       thursday: { theme: "Finance", keywords: "money finance investing budget", creators: ["marktilbury"], task: "Spend 10 minutes on your money: check a balance, a budget line or one subscription." },
-      friday: { theme: "Learn a skill", keywords: "tutorial how to beginner", creators: ["freecodecamp"], task: "Spend 20 minutes building along with today's tutorial." },
+      friday: { theme: "Learning and habits", keywords: "learning habits focus productivity", creators: ["TED"], task: "Pick one habit from today's video and try it once before bed." },
       saturday: { theme: "Music", keywords: "guitar lesson", creators: ["andycrowley"], task: "Practise for 15 minutes." }
     }
   };
@@ -105,7 +105,9 @@
       out.push(v); total += v.minutes || 0;
     });
     if (!out.length && candidates.length && budget) {
-      out = [candidates.slice().sort(function (a, b) { return (a.minutes || 0) - (b.minutes || 0); })[0]];
+      // nothing fits: offer the shortest video, but never one far beyond the limit
+      var shortest = candidates.slice().sort(function (a, b) { return (a.minutes || 0) - (b.minutes || 0); })[0];
+      if ((shortest.minutes || 0) <= budget * 1.5) out = [shortest];
     }
     return out;
   }
