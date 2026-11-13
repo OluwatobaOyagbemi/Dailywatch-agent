@@ -17,6 +17,8 @@ Usage:
     python watch_agent.py --dry-run          # today's picks, send nothing
     python watch_agent.py --day friday       # pretend it's another weekday
     python watch_agent.py                    # send for real
+    python watch_agent.py --sync             # score ✅ / ⏭ / 💪 taps from Telegram
+    python watch_agent.py --stats            # level, XP, streak, badges
 """
 
 import argparse
@@ -31,10 +33,13 @@ from pathlib import Path
 import requests
 import yaml
 
+import game
+
 ROOT = Path(__file__).parent
 CONFIG_PATH = ROOT / "config.yaml"
 SENT_PATH = ROOT / "sent.json"
 LAST_PATH = ROOT / "last_sent.txt"
+PROGRESS_PATH = ROOT / "progress.json"
 YT = "https://www.googleapis.com/youtube/v3"
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
@@ -308,40 +313,52 @@ def video_meta(v):
     return " · ".join(parts)
 
 
-def build_message(theme, weekday, videos, cfg=None, day_cfg=None):
+def build_message(theme, weekday, videos, cfg=None, day_cfg=None, status=None):
     """Telegram version (HTML parse mode — safe for any title)."""
     e = html.escape
     lines = [f"🎯 <b>{e(weekday.title())} — {e(theme)}</b>"]
     if not videos:
         return "\n".join(lines + ["", EMPTY])
-    lines += [summary_line(videos), ""]
+    lines.append(summary_line(videos))
+    lines += [e(x) for x in (status or [])]
+    lines.append("")
     for i, v in enumerate(videos, 1):
         length = f" · {video_meta(v)}" if video_meta(v) else ""
         lines.append(f'{i}. <a href="{e(video_url(v, cfg))}">{e(v["title"])}</a>{e(length)}')
         lines.append(f"   <i>{e(v['channel'])}</i>")
+    task = (day_cfg or {}).get("task")
+    if task:
+        lines += ["", f"💪 <b>Practice:</b> {e(task)}"]
     prompt = day_prompt(day_cfg, cfg)
     if prompt:
         lines += ["", f"💭 {e(prompt)}"]
+    if status:
+        lines += ["", "<i>Tap ✅ when you finish a video, ⏭ to skip one.</i>"]
     return "\n".join(lines)
 
 
-def build_plain(theme, weekday, videos, cfg=None, day_cfg=None):
+def build_plain(theme, weekday, videos, cfg=None, day_cfg=None, status=None):
     """Plain-text version (email fallback, terminal preview)."""
     lines = [f"🎯 {weekday.title()} — {theme}"]
     if not videos:
         return "\n".join(lines + ["", EMPTY])
-    lines += [summary_line(videos), ""]
+    lines.append(summary_line(videos))
+    lines += list(status or [])
+    lines.append("")
     for i, v in enumerate(videos, 1):
         length = f" ({video_meta(v)})" if video_meta(v) else ""
         lines.append(f"{i}. {v['title']}{length}")
         lines.append(f"   {v['channel']} — {video_url(v, cfg)}")
+    task = (day_cfg or {}).get("task")
+    if task:
+        lines += ["", f"💪 Practice: {task}"]
     prompt = day_prompt(day_cfg, cfg)
     if prompt:
         lines += ["", f"💭 {prompt}"]
     return "\n".join(lines)
 
 
-def build_html(theme, weekday, videos, cfg=None, day_cfg=None):
+def build_html(theme, weekday, videos, cfg=None, day_cfg=None, status=None):
     """Email (HTML) version."""
     e = html.escape
     rows = "".join(
@@ -352,26 +369,39 @@ def build_html(theme, weekday, videos, cfg=None, day_cfg=None):
         for v in videos
     ) or f'<li>{EMPTY}</li>'
     sub = summary_line(videos) if videos else "Your picks for today."
+    status_html = "".join(f'<p style="margin:0 0 6px;color:#444;font-size:14px">{e(x)}</p>'
+                          for x in (status or []))
+    task = (day_cfg or {}).get("task")
+    task_html = (f'<p style="margin:20px 0 0;padding:12px 14px;background:#fff6e5;border-radius:8px">'
+                 f'💪 <b>Practice:</b> {e(task)}</p>') if task and videos else ""
     prompt = day_prompt(day_cfg, cfg)
     prompt_html = (f'<p style="margin:20px 0 0;padding:12px 14px;background:#f4f6fa;border-radius:8px">'
                    f'💭 {e(prompt)}</p>') if prompt and videos else ""
     return (f'<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:560px;'
             f'margin:0 auto;padding:24px;color:#222">'
             f'<h2 style="margin:0 0 4px">🎯 {e(weekday.title())} — {e(theme)}</h2>'
-            f'<p style="margin:0 0 20px;color:#666">{e(sub)}</p>'
-            f'<ol style="padding-left:20px">{rows}</ol>{prompt_html}'
+            f'<p style="margin:0 0 12px;color:#666">{e(sub)}</p>{status_html}'
+            f'<ol style="padding-left:20px;margin-top:16px">{rows}</ol>{task_html}{prompt_html}'
             f'<p style="margin-top:28px;font-size:12px;color:#999">Sent by Daily Watch Agent</p></div>')
 
 
 # ── delivery ─────────────────────────────────────────────────────────────────
 
-def send_telegram(text, token, chat_id):
-    r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
-                      json={"chat_id": chat_id, "text": text, "parse_mode": "HTML",
-                            "disable_web_page_preview": True},
-                      timeout=20)
+def tg_call(token, method, payload):
+    """Call a Telegram Bot API method and return its `result`."""
+    r = requests.post(f"https://api.telegram.org/bot{token}/{method}", json=payload, timeout=20)
     if not r.ok:
-        raise RuntimeError(f"Telegram said {r.status_code}: {r.text[:200]}")
+        raise RuntimeError(f"Telegram {method} said {r.status_code}: {r.text[:200]}")
+    return r.json().get("result")
+
+
+def send_telegram(text, token, chat_id, reply_markup=None):
+    """Send a message; returns its message_id."""
+    payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True}
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+    result = tg_call(token, "sendMessage", payload)
+    return (result or {}).get("message_id")
 
 
 def send_email(subject, html_body, plain_body):
@@ -409,10 +439,11 @@ def missing_secrets(channel):
     return [k for k in need if not os.environ.get(k)]
 
 
-def deliver(cfg, day_cfg, weekday, videos):
-    """Send via every channel in `deliver:`. One failing channel doesn't stop the others."""
+def deliver(cfg, day_cfg, weekday, videos, status=None, keyboard=None):
+    """Send via every channel in `deliver:`. One failing channel doesn't stop the others.
+    Returns (channels delivered, Telegram message_id or None)."""
     theme = day_cfg["theme"]
-    delivered = []
+    delivered, message_id = [], None
     for ch in delivery_channels(cfg):
         missing = missing_secrets(ch)
         if missing is None:
@@ -423,18 +454,85 @@ def deliver(cfg, day_cfg, weekday, videos):
             continue
         try:
             if ch == "telegram":
-                send_telegram(build_message(theme, weekday, videos, cfg, day_cfg),
-                              os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"])
+                message_id = send_telegram(build_message(theme, weekday, videos, cfg, day_cfg, status),
+                                           os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"],
+                                           keyboard)
             else:
                 subject = f"{weekday.title()} — {theme}"
                 if videos:
                     subject += f" ({summary_line(videos)})"
-                send_email(subject, build_html(theme, weekday, videos, cfg, day_cfg),
-                           build_plain(theme, weekday, videos, cfg, day_cfg))
+                send_email(subject, build_html(theme, weekday, videos, cfg, day_cfg, status),
+                           build_plain(theme, weekday, videos, cfg, day_cfg, status))
             delivered.append(ch)
         except Exception as ex:  # keep going: email can still land if Telegram is down
             print(f"  ! {ch} failed: {ex}", file=sys.stderr)
-    return delivered
+    return delivered, message_id
+
+
+# ── gamification (Telegram buttons) ──────────────────────────────────────────
+
+def gamify_on(cfg):
+    return cfg.get("gamify", True) and "telegram" in delivery_channels(cfg)
+
+
+def sync_telegram(state, today):
+    """Score button taps (and answer /stats) since the last run. Returns True if state changed.
+
+    There's no server: taps wait in Telegram (kept ~24h) until the next hourly run reads them."""
+    token, chat_id = os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return False
+    try:
+        updates = tg_call(token, "getUpdates", {"offset": state["last_update_id"] + 1, "timeout": 0,
+                                                "allowed_updates": ["callback_query", "message"]}) or []
+    except Exception as ex:
+        print(f"  ! could not read Telegram taps: {ex}", file=sys.stderr)
+        return False
+    if not updates:
+        return False
+
+    events, touched, want_stats = [], set(), False
+    for u in updates:
+        state["last_update_id"] = max(state["last_update_id"], u["update_id"])
+        cq = u.get("callback_query")
+        if cq:
+            if str(cq.get("message", {}).get("chat", {}).get("id")) != str(chat_id):
+                continue
+            parts = (cq.get("data") or "").split("|")
+            got = []
+            if len(parts) == 3 and parts[2].isdigit():
+                got = game.apply(state, parts[0], parts[1], int(parts[2]), today)
+                if got:
+                    touched.add(parts[1])
+            events += got
+            try:  # usually too old to answer by the time we run; harmless if so
+                tg_call(token, "answerCallbackQuery", {"callback_query_id": cq["id"],
+                                                       "text": got[0] if got else "Already counted"})
+            except Exception:
+                pass
+            continue
+        msg = u.get("message") or {}
+        if str(msg.get("chat", {}).get("id")) == str(chat_id) and (msg.get("text") or "").startswith("/stats"):
+            want_stats = True
+
+    for day in touched:
+        mid = state["days"][day].get("message_id")
+        if mid:
+            try:
+                tg_call(token, "editMessageReplyMarkup", {"chat_id": chat_id, "message_id": mid,
+                                                          "reply_markup": game.keyboard_for_day(state, day)})
+            except Exception as ex:
+                print(f"  ! could not update buttons for {day}: {ex}", file=sys.stderr)
+    try:
+        if events:
+            tg_call(token, "sendMessage", {"chat_id": chat_id,
+                                           "text": "\n".join(events) + "\n\n" + game.status_line(state, today)})
+        if want_stats:
+            tg_call(token, "sendMessage", {"chat_id": chat_id, "text": game.stats_text(state, today)})
+    except Exception as ex:
+        print(f"  ! could not send progress message: {ex}", file=sys.stderr)
+    print(f"Synced {len(updates)} Telegram update(s): {len(events)} event(s).")
+    return True
 
 
 # ── setup check ──────────────────────────────────────────────────────────────
@@ -500,10 +598,22 @@ def main():
     ap.add_argument("--preview", action="store_true", help="print the whole week's picks, send nothing")
     ap.add_argument("--check", action="store_true", help="validate config, creator handles and secrets")
     ap.add_argument("--force", action="store_true", help="send even if already sent today")
+    ap.add_argument("--sync", action="store_true", help="score Telegram button taps, send nothing else")
+    ap.add_argument("--stats", action="store_true", help="print level, XP, streak and badges")
     args = ap.parse_args()
 
     cfg = load_config()
     api_key = os.environ.get("YOUTUBE_API_KEY")
+    today = datetime.now().strftime("%Y-%m-%d")
+    state = game.load(PROGRESS_PATH)
+
+    if args.stats:
+        print(game.stats_text(state, today))
+        return
+    if args.sync:
+        if gamify_on(cfg) and sync_telegram(state, today):
+            game.save(PROGRESS_PATH, state)
+        return
 
     if args.check:
         sys.exit(check(cfg, api_key))
@@ -524,7 +634,6 @@ def main():
             print(build_plain(day_cfg["theme"], weekday, videos, cfg, day_cfg))
         return
 
-    today = datetime.now().strftime("%Y-%m-%d")
     if not args.dry_run and not args.force and LAST_PATH.exists() and LAST_PATH.read_text().strip() == today:
         print(f"Already sent today ({today}); skipping. Use --force to resend.")
         return
@@ -540,13 +649,30 @@ def main():
     print(f"{weekday.title()}: {day_cfg['theme']}")
     videos = pick_videos(day_cfg, cfg, api_key, sent)
 
+    gamify = gamify_on(cfg)
+    status, keyboard = None, None
+    if gamify:
+        if not args.dry_run:
+            sync_telegram(state, today)  # score yesterday's taps first so the streak is current
+        status = [game.status_line(state, today)]
+        if weekday == str(cfg.get("recap_day", "sunday")).lower():
+            recap = game.weekly_recap(state, today)
+            if recap:
+                status.append(recap)
+        if videos:
+            keyboard = game.keyboard(today, len(videos), bool(day_cfg.get("task")))
+
     if args.dry_run:
-        print("\n" + build_plain(day_cfg["theme"], weekday, videos, cfg, day_cfg))
+        print("\n" + build_plain(day_cfg["theme"], weekday, videos, cfg, day_cfg, status))
         return
 
-    delivered = deliver(cfg, day_cfg, weekday, videos)
+    delivered, message_id = deliver(cfg, day_cfg, weekday, videos, status, keyboard)
     if not delivered:
         sys.exit("Nothing was delivered — run `python watch_agent.py --check` to see what's missing.")
+    if gamify and videos:
+        game.record_day(state, today, weekday, day_cfg["theme"], videos, day_cfg.get("task"), message_id)
+    if gamify:
+        game.save(PROGRESS_PATH, state)
     sent.update(v["id"] for v in videos)
     save_sent(sent)
     LAST_PATH.write_text(today + "\n")

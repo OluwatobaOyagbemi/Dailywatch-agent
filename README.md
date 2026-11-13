@@ -38,6 +38,26 @@ My first instinct was to build an app with calendar sync and push notifications.
 - **Only your creators.** No algorithm picks for you. General search is off unless you turn it on.
 - **Rest days.** Leave a weekday out of `config.yaml` and nothing is sent that day.
 
+## Level up
+
+Telegram messages come with buttons, so finishing your plan becomes a game:
+
+| Action | Reward |
+|---|---|
+| ✅ Watched a video | +10 XP |
+| 💪 Did the day's practice task | +20 XP |
+| 💯 Perfect day (every video watched or skipped, at least one watched, practice done) | +15 XP bonus |
+| ⏭ Skipped a video | no XP, no penalty, still counts toward a perfect day |
+
+- **Streaks:** days in a row you watched something or practised. Rest days don't break them.
+- **Levels:** from *Recovering Scroller* through *Intentional Viewer*, *Learner*, *Practitioner* … up to *Legend*.
+- **Badges:** First Watch, First Rep, Perfect Day, 3-, 7- and 30-day streaks, Perfect Week, 25 and 100 videos, 10 practice reps, and a *Regular* badge for each theme once you've watched 10 videos in it.
+- **Weekly recap** in the `recap_day` message (default Sunday). Send **/stats** to the bot anytime.
+
+Each day gets a `task:` in `config.yaml`, one small thing to do with what you watched (for example *"Record a 60-second voice note explaining one idea from today's video"*).
+
+There's no server. Your taps wait in Telegram until the next hourly run scores them. Then the buttons update (☑️ watched, ➖ skipped) and the bot replies with your XP, streak and any new badges. Expect that reply within about an hour. Progress is saved in `progress.json` in the repo, so in a public repo it's visible like `sent.json`. Set `gamify: false` to turn this off. Email gets the streak line and the task, but no buttons.
+
 <!-- Replace this comment with a screenshot of the Telegram message:
 ![Telegram message](docs/screenshot.png) -->
 
@@ -55,7 +75,7 @@ Everything runs on free tiers. The script uses a few hundred YouTube API units a
 1. **Fork** this repo (keep it public so Actions stays free).
 2. **Start fresh.** Copy `config.example.yaml` over `config.yaml`, then clear the previous owner's history:
    ```bash
-   cp config.example.yaml config.yaml && echo "[]" > sent.json && rm -f last_sent.txt
+   cp config.example.yaml config.yaml && echo "[]" > sent.json && rm -f last_sent.txt progress.json
    ```
    Edit `config.yaml`: your themes, your creators. A creator handle is the part after `@` in the channel URL (`youtube.com/@TED` → `TED`).
 3. **YouTube API key:** [console.cloud.google.com](https://console.cloud.google.com) → create or pick a project → *APIs & Services → Library* → enable **YouTube Data API v3** → *Credentials → Create credentials → API key*. No billing needed.
@@ -84,6 +104,8 @@ python watch_agent.py --preview                # see the whole week's picks, sen
 python watch_agent.py --dry-run --day monday   # one day, send nothing
 python watch_agent.py                          # send for real
 python watch_agent.py --force                  # send again even if today already went out
+python watch_agent.py --sync                   # score Telegram button taps now
+python watch_agent.py --stats                  # level, XP, streak, badges
 ```
 
 Something not arriving? Run `--check` first. It lists every handle it can't find and every missing secret.
@@ -95,7 +117,7 @@ pip install pytest
 pytest -q
 ```
 
-Offline tests use a fake YouTube API, so no key or network is needed. They cover the picking logic (round-robin, no repeats, Shorts filter, off-theme skipping, missing channels), the time budget, distraction-free links, message escaping for Telegram and email, delivery fallbacks and `--check`. They run on every push.
+Offline tests use a fake YouTube API, so no key or network is needed. They cover the picking logic (round-robin, no repeats, Shorts filter, off-theme skipping, missing channels), the time budget, distraction-free links, XP / streaks / badges and the Telegram tap sync, message escaping for Telegram and email, delivery fallbacks and `--check`. They run on every push.
 
 ## Settings (`config.yaml`)
 
@@ -111,6 +133,9 @@ Offline tests use a fake YouTube API, so no key or network is needed. They cover
 | `distraction_free` | `true` = links open the bare player with no feed, comments or autoplay |
 | `daily_minutes_budget` | cap on the day's total watch time in minutes (`0` = no cap) |
 | `prompt` | reflection line at the end of each message (a day's `prompt:` overrides it) |
+| `days.<day>.task` | one small practice task for that day, worth +20 XP |
+| `gamify` | `true` = ✅ / ⏭ / 💪 buttons, XP, streaks, levels and badges (Telegram) |
+| `recap_day` | which day's message includes the weekly recap (default `sunday`) |
 | `deliver` | `[telegram]`, `[email]`, or `[telegram, email]`. If one channel fails, the others still send |
 
 ## Design notes
@@ -122,7 +147,7 @@ Offline tests use a fake YouTube API, so no key or network is needed. They cover
 
 ## Ideas for later
 
-- "✅ Watched" buttons on the Telegram message, with a weekly streak in Sunday's message
+- Instant tap feedback via a free webhook (e.g. a Cloudflare Worker) instead of the hourly sync
 - One-line "why this video" note via a free LLM tier
 - WhatsApp or SMS delivery
 - A hosted version where you just text the bot your weekly plan

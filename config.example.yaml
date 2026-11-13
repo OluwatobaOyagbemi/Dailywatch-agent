@@ -29,6 +29,15 @@ fallback_to_latest: false
 # and in the message even on quiet weeks.
 older_on_theme: true
 
+# ── Level up ─────────────────────────────────────────────────
+# Telegram only. Buttons under each message: ✅ watched (+10 XP), ⏭ skip,
+# 💪 practice done (+20 XP); finish everything for a +15 XP perfect-day bonus.
+# Streaks, levels and badges live in progress.json. Send /stats to the bot anytime.
+gamify: true
+
+# Which day's message carries the weekly recap
+recap_day: sunday
+
 # ── Anti-doomscroll ──────────────────────────────────────────
 # true = links open YouTube's bare player (no recommendations, comments or Shorts
 #        feed). Videos whose creators block embedding fall back to normal links.
@@ -50,42 +59,49 @@ deliver: [telegram]
 #   creators - YouTube channel handles (the part after @ in the channel URL)
 #   search   - fallback search phrases, used only when creators_only is false
 #   prompt   - (optional) replaces the global prompt for that day
+#   task     - (optional) one small thing to do after watching; worth +20 XP
 days:
   monday:
     theme: Learn a Skill
     keywords: "tutorial how to beginner"
     creators: [freecodecamp, TED]
     search: ["learn a new skill"]
+    task: "Spend 20 minutes building along with today's tutorial."
 
   tuesday:
     theme: Leadership
     keywords: "leadership leader team"
     creators: [MaxwellLeadershipOfficial, TED]
     search: ["leadership principles"]
+    task: "Write down one leadership habit from today and practise it once before bed."
 
   wednesday:
     theme: Health and Fitness
     keywords: "workout fitness health"
     creators: [TED]
     search: ["beginner workout"]
+    task: "Do a 15-minute workout from today's videos."
 
   thursday:
     theme: Money
     keywords: "money finance investing budget"
     creators: [marktilbury]
     search: ["personal finance basics"]
+    task: "Spend 10 minutes on your money: check a balance, a budget line or one subscription."
 
   friday:
     theme: Public Speaking
     keywords: "public speaking storytelling presentation"
     creators: [TED, TEDx]
     search: ["public speaking tips"]
+    task: "Record a 60-second voice note explaining one idea from today's video."
 
   saturday:
     theme: Hobby
     keywords: "lesson tutorial"
     creators: [andycrowley]
     search: ["beginner guitar lesson"]
+    task: "Practise for 15 minutes: a warm-up plus the exercise from today's lesson."
 
   sunday:
     theme: Reflection
@@ -93,3 +109,4 @@ days:
     creators: [TED]
     search: ["mindset talk"]
     prompt: "What's one thing from this week you want to keep doing?"
+    task: "Plan next week: pick the one habit you'll focus on."

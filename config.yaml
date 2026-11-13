@@ -29,6 +29,15 @@ fallback_to_latest: false
 # and in the message even on quiet weeks.
 older_on_theme: true
 
+# ── Level up ─────────────────────────────────────────────────
+# Telegram only. Buttons under each message: ✅ watched (+10 XP), ⏭ skip,
+# 💪 practice done (+20 XP); finish everything for a +15 XP perfect-day bonus.
+# Streaks, levels and badges live in progress.json. Send /stats to the bot anytime.
+gamify: true
+
+# Which day's message carries the weekly recap
+recap_day: sunday
+
 # ── Anti-doomscroll ──────────────────────────────────────────
 # true = links open YouTube's bare player (no recommendations, comments or Shorts
 #        feed). Videos whose creators block embedding fall back to normal links.
@@ -50,42 +59,49 @@ deliver: [telegram, email]
 #   creators - YouTube channel handles (the part after @ in the channel URL)
 #   search   - fallback search phrases, used only when creators_only is false
 #   prompt   - (optional) replaces the global prompt for that day
+#   task     - (optional) one small thing to do after watching; worth +20 XP
 days:
   monday:
     theme: Public Speaking and Communication
     keywords: "public speaking storytelling presentation communication"
     creators: [TED, philipp-humm, JoyceDaniels, TEDx]
     search: ["public speaking skills", "how to communicate confidently"]
+    task: "Record a 60-second voice note explaining one idea from today's video."
 
   tuesday:
     theme: Mentorship and Leadership
     keywords: "leadership leader mentor"
     creators: [MaxwellLeadershipOfficial, femi_lazarus, munroeglobal, SamAdeyemiTV]
     search: ["leadership principles", "mentorship"]
+    task: "Write down one leadership habit from today and practise it once before bed."
 
   wednesday:
     theme: Relationship, Communication and Marriage
     keywords: "marriage relationship love"
     creators: [EzinneZara, PastorDolapoLawal, femi_lazarus, munroeglobal]
     search: ["healthy relationships advice", "preparing for marriage"]
+    task: "Send one intentional message of appreciation to someone you care about."
 
   thursday:
     theme: Finance, Money and Business
     keywords: "money finance business wealth investing"
     creators: [marktilbury, adesinaassets, PastorPoju]
     search: ["biblical finance", "building a business"]
+    task: "Spend 10 minutes on your money: check a balance, a budget line or one subscription."
 
   friday:
     theme: Men's Conference and Fatherhood
     keywords: "men fatherhood father man manhood"
     creators: [munroeglobal, femi_lazarus]
     search: ["men's conference", "fatherhood sermon"]
+    task: "Write one sentence about the man and father you're becoming, and one action toward it this week."
 
   saturday:
     theme: Music, Guitar and Voice Training
     keywords: "guitar lesson vocal singing"
     creators: [andycrowley]
     search: ["vocal warm up exercises", "beginner guitar lesson", "singing technique"]
+    task: "Practise for 15 minutes: a warm-up plus the exercise from today's lesson."
 
   sunday:
     theme: Sermons
@@ -93,3 +109,4 @@ days:
     creators: [KoinoniaGlobal, CelebrationGlobalTV, femi_lazarus, PastorPoju]
     search: ["sunday sermon"]
     prompt: "What's one thing from this message you'll act on this week?"
+    task: "Write down the key line or scripture from today's message and one way you'll live it this week."

@@ -167,8 +167,8 @@ def test_one_failing_channel_does_not_block_the_other(monkeypatch):
     sent = []
     monkeypatch.setattr(w, "send_telegram", boom)
     monkeypatch.setattr(w, "send_email", lambda *a: sent.append(a))
-    out = w.deliver({"deliver": ["telegram", "email"]}, {"theme": "T"}, "monday",
-                    [{"id": "x", "title": "t", "channel": "c"}])
+    out, _ = w.deliver({"deliver": ["telegram", "email"]}, {"theme": "T"}, "monday",
+                       [{"id": "x", "title": "t", "channel": "c"}])
     assert out == ["email"] and sent
 
 
