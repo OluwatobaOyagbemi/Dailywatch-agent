@@ -64,6 +64,9 @@
 
   <div class="notice-wrap"><div class="notice" id="notice" role="status" hidden></div></div>
 
+  <!-- Weekly planner for visitors (no account) -->
+  <main class="planner" id="planner" hidden></main>
+
   <main class="shell" id="main" aria-busy="true">
 
     <!-- Left: weekly plan, profile-card style -->
@@ -104,7 +107,7 @@
 
           <button class="overlay overlay--pause" id="pause-overlay" type="button" hidden aria-label="Resume video">
             <span class="play-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span>
-            <span class="pause-note">Paused · no suggestions here</span>
+            <span class="pause-note">Paused. Tap to resume</span>
           </button>
 
           <div class="overlay overlay--panel" id="next-overlay" hidden>
@@ -221,10 +224,14 @@
         Daily Watch
       </span>
       <span>A short list, then you're done.</span>
+      <a class="footer__link" href="#plan" id="footer-plan" hidden>Plan your week</a>
+      <a class="footer__link" href="https://github.com/OluwatobaOyagbemi/Dailywatch-agent#set-it-up-for-yourself-15-min" target="_blank" rel="noopener noreferrer">Get it on Telegram</a>
       <span class="kbd-hint"><kbd>N</kbd> next · <kbd>P</kbd> previous · <kbd>M</kbd> mark watched · <kbd>S</kbd> skip</span>
     </div>
   </footer>
 
+  <script src="config.js" defer></script>
+  <script src="planner.js" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>
