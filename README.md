@@ -37,6 +37,8 @@ My first instinct was to build an app with calendar sync and push notifications.
 - **A finish line.** The list ends, followed by one reflection prompt. Set a global one or one per day.
 - **Only your creators.** No algorithm picks for you. General search is off unless you turn it on.
 - **Rest days.** Leave a weekday out of `config.yaml` and nothing is sent that day.
+- **Something to do afterwards.** Give each day a `task:`, one small thing to try with what you watched (*"Record a 60-second voice note explaining one idea"*). It appears in the message and on the watch page as **Try this**.
+- **Know before you tap.** With `why_notes` on, each video gets a one-line note on what it offers for today's theme, so you can skip the ones that don't fit without opening them (see [Why-watch notes](#why-watch-notes)).
 
 <!-- Replace this comment with a screenshot of the Telegram message:
 ![Telegram message](docs/screenshot.png) -->
@@ -48,13 +50,22 @@ Each day's message links to your own watch page on GitHub Pages instead of YouTu
 - **A list that ends:** today's videos with thumbnails, lengths and progress, then *"End of today's list. Nothing more to scroll."*
 - **No YouTube rabbit holes:** videos play in a privacy-enhanced player. When one ends, the page shows its own *Up next* card in place of YouTube's grid of suggestions. When you pause, a resume screen covers YouTube's "More videos" strip, and the control bar stays usable.
 - **No autoplay:** you choose when the next video starts.
-- **A finish line:** once you've watched everything (or tap *Finish for today*), the page shows *"That's today."*, your reflection prompt and when tomorrow's session arrives. No other links.
-- **Built to feel familiar and work everywhere:** works on phone and desktop, follows your light or dark setting, keyboard shortcuts (`N` next, `P` previous, `M` mark watched), and screen-reader labels. Progress is remembered on that device.
+- **Skip without guilt:** *Skip* (or `S`) marks a video "not for me". It counts toward finishing the session, and the next video is lined up, not autoplayed.
+- **A finish line:** once every video is watched or skipped (or you tap *Finish for today*), the page shows *"That's today."*, your reflection prompt and when tomorrow's session arrives. No other links.
+- **Built to feel familiar and work everywhere:** works on phone and desktop, follows your light or dark setting, keyboard shortcuts (`N` next, `P` previous, `M` mark watched, `S` skip), and screen-reader labels. Progress is remembered on that device.
 - **Edge cases handled:** if a creator blocks playback outside YouTube, the page says so and offers a single labelled "Open on YouTube" button. If you tap the link before GitHub has published the day's data, you can start watching straight away and titles fill in when it arrives.
 
 **Turn it on (once):** in your repo, *Settings → Pages → Build and deployment → Deploy from a branch → `main` / `/docs` → Save*. Your page is at `https://<your-username>.github.io/<repo-name>/`. Until it's live, messages link straight to YouTube, so leaving `watch_page: true` is safe. To use another address, set a `WATCH_PAGE_URL` repo variable.
 
 Your daily list is published at that address, as public as the repo itself.
+
+## Why-watch notes
+
+Optional. When an `ANTHROPIC_API_KEY` secret is present, the agent asks Claude for one short note per video based on its title, channel and description, for example *"💡 Three habits that steady your voice in the first minute of a talk."* The notes appear in the message, the email and on the watch page.
+
+- **Setup:** create a key at [console.anthropic.com](https://console.anthropic.com), then add it as a repo secret named `ANTHROPIC_API_KEY`. `python watch_agent.py --check` shows whether notes are on.
+- **Cost:** one small request a day to `claude-opus-5-5` at low effort, roughly one to two cents. Server-side refusal fallbacks are enabled, so if a request is declined it's retried on another model automatically.
+- **Safe by default:** with no key, or if the request fails for any reason, the message goes out as usual without notes. Video descriptions are treated as data, and every note is cleaned and capped at 160 characters. Set `why_notes: false` to turn it off.
 
 ## How it works
 
@@ -83,7 +94,7 @@ Everything runs on free tiers. The script uses a few hundred YouTube API units a
    Secrets: `SMTP_USER` (your address), `SMTP_PASS` (the app password), optionally `EMAIL_TO` (defaults to yourself), `SMTP_HOST` / `SMTP_PORT` (defaults: `smtp.gmail.com` / `587`; Outlook is `smtp.office365.com` / `587`)
 
 5. In your fork: *Settings → Secrets and variables → Actions*:
-   - **Secrets** tab: add `YOUTUBE_API_KEY` plus the secrets for your delivery choice.
+   - **Secrets** tab: add `YOUTUBE_API_KEY` plus the secrets for your delivery choice. Optionally add `ANTHROPIC_API_KEY` for [why-watch notes](#why-watch-notes).
    - **Variables** tab: add `TIMEZONE` (e.g. `Europe/London`, `Africa/Lagos`, `America/Los_Angeles`; [list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)) and `SEND_HOUR` (`0`–`23`, local). Defaults: `America/New_York`, `12`.
 6. *Settings → Pages* → deploy from branch `main`, folder `/docs` (this turns on the [watch page](#watch-page)).
 7. *Actions* tab → enable workflows on your fork → *Daily Watch → Run workflow.* Check your phone or inbox.
@@ -127,10 +138,12 @@ Offline tests use a fake YouTube API, so no key or network is needed. They cover
 | `distraction_free` | `true` = links open the bare player with no feed, comments or autoplay |
 | `daily_minutes_budget` | cap on the day's total watch time in minutes (`0` = no cap) |
 | `prompt` | reflection line at the end of each message (a day's `prompt:` overrides it) |
+| `days.<day>.task` | one small thing to try after watching, shown as **Try this** |
 | `blocked_words` | never send titles containing these words (`#shorts` is always blocked) |
 | `max_api_units` | hard cap on YouTube API units per run (default `5000` of the free 10,000/day) |
 | `watch_page` | `true` = messages link to your watch page once it's published (see *Watch page*) |
 | `watch_page_url` | optional custom address for the watch page (default `https://<owner>.github.io/<repo>/`) |
+| `why_notes` | `true` = one-line "why watch this" note per video (needs an `ANTHROPIC_API_KEY` secret) |
 | `deliver` | `[telegram]`, `[email]`, or `[telegram, email]`. If one channel fails, the others still send |
 
 ## Guardrails
@@ -162,7 +175,6 @@ All of these live in [`guardrails.py`](guardrails.py) and are covered by tests.
 ## Ideas for later
 
 - "✅ Watched" buttons on the Telegram message, with a weekly streak in Sunday's message
-- One-line "why this video" note via a free LLM tier
 - WhatsApp or SMS delivery
 - A hosted version where you just text the bot your weekly plan
 

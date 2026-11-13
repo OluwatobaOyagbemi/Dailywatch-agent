@@ -76,7 +76,8 @@ def test_page_data_shape(monkeypatch, tmp_path):
     full = w.page_data("2026-11-13", "friday", {"theme": "F"}, {"days": {"friday": {"theme": "F"}}}, VIDS)
     assert full["week"][4] == {"day": "friday", "theme": "F", "rest": False}
     assert data["videos"][0] == {"id": "abcDEF12345", "title": "One", "channel": "C1", "minutes": 12.0,
-                                 "embeddable": True, "older": True, "published": "2024-03-01"}
+                                 "embeddable": True, "older": True, "published": "2024-03-01",
+                                 "note": ""}
     assert data["videos"][1]["embeddable"] is False
     monkeypatch.setattr(w, "PAGE_DATA_PATH", tmp_path / "docs" / "today.json")
     w.write_page_data(data)
