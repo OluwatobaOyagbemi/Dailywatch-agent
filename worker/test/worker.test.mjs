@@ -144,3 +144,17 @@ test("bad input -> 400; unknown origin gets no CORS header; no key -> 503", asyn
   assert.equal(res.headers.get("Access-Control-Allow-Origin"), null);
   assert.equal((await worker.fetch(req("creators=speak&q=x"), {}, ctx)).status, 503);
 });
+
+test("session: a recent video found by the theme search is not labelled older", async () => {
+  setup();
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (new URL(String(url)).pathname.endsWith("/search")) {
+      return Response.json({ items: [{ id: { videoId: "quietnew001" }, snippet: { title: "Speaking", channelTitle: "Quiet", publishedAt: now } }] });
+    }
+    return realFetch(url);
+  };
+  const body = await (await worker.fetch(req("creators=quiet&q=public speaking"), env, ctx)).json();
+  assert.equal(body.videos[0].id, "quietnew001");
+  assert.equal(body.videos[0].older, false);
+});

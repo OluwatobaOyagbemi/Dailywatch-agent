@@ -628,7 +628,7 @@
         return;
       }
       if (!s.videos.length) {
-        emptyState(s, "Nothing to watch today", "Your creators haven't posted anything that fits this theme. Try adding a creator or two to this day.");
+        emptyState(s, "Nothing to watch today", "Nothing from your creators fits this theme and your daily time limit. Try adding a creator, or raise the limit in Edit your plan.");
         return;
       }
       start(s);

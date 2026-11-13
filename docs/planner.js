@@ -17,13 +17,13 @@
   var DEFAULT_PROMPT = "Before you close this: write down one idea you'll use this week.";
 
   var EXAMPLE = {
-    v: 1, perDay: 3, budget: 0, fill: true,
+    v: 1, perDay: 3, budget: 60, fill: true,
     days: {
       monday: { theme: "Public speaking", keywords: "public speaking storytelling presentation", creators: ["TED", "TEDx"], task: "Record a 60-second voice note explaining one idea from today's video." },
       tuesday: { theme: "Leadership", keywords: "leadership leader team", creators: ["MaxwellLeadershipOfficial", "TED"], task: "Write down one leadership habit and practise it once today." },
       wednesday: { theme: "Health and fitness", keywords: "workout fitness health", creators: ["TED"], task: "Do a 15-minute workout." },
       thursday: { theme: "Finance", keywords: "money finance investing budget", creators: ["marktilbury"], task: "Spend 10 minutes on your money: check a balance, a budget line or one subscription." },
-      friday: { theme: "Learn a skill", keywords: "tutorial how to beginner", creators: ["freecodecamp"], task: "Spend 20 minutes building along with today's tutorial." },
+      friday: { theme: "Learning and habits", keywords: "learning habits focus productivity", creators: ["TED"], task: "Pick one habit from today's video and try it once before bed." },
       saturday: { theme: "Music", keywords: "guitar lesson", creators: ["andycrowley"], task: "Practise for 15 minutes." }
     }
   };
@@ -52,7 +52,7 @@
     var plan = {
       v: 1,
       perDay: Math.min(10, Math.max(1, parseInt(raw.perDay, 10) || 3)),
-      budget: Math.min(600, Math.max(0, parseInt(raw.budget, 10) || 0)),
+      budget: raw.budget === undefined ? 60 : Math.min(600, Math.max(0, parseInt(raw.budget, 10) || 0)),
       fill: raw.fill !== false,
       days: {}
     };
@@ -105,7 +105,9 @@
       out.push(v); total += v.minutes || 0;
     });
     if (!out.length && candidates.length && budget) {
-      out = [candidates.slice().sort(function (a, b) { return (a.minutes || 0) - (b.minutes || 0); })[0]];
+      // nothing fits: offer the shortest video, but never one far beyond the limit
+      var shortest = candidates.slice().sort(function (a, b) { return (a.minutes || 0) - (b.minutes || 0); })[0];
+      if ((shortest.minutes || 0) <= budget * 1.5) out = [shortest];
     }
     return out;
   }
@@ -223,7 +225,7 @@
     for (var n = 1; n <= 10; n++) perDay.appendChild(h("option", { value: String(n), text: n + (n === 1 ? " video" : " videos"), selected: (plan ? plan.perDay : 3) === n }));
     var budget = h("select", { id: "p-budget" });
     [[0, "No limit"], [15, "15 minutes"], [30, "30 minutes"], [45, "45 minutes"], [60, "1 hour"], [90, "1.5 hours"], [120, "2 hours"]].forEach(function (o) {
-      budget.appendChild(h("option", { value: String(o[0]), text: o[1], selected: (plan ? plan.budget : 0) === o[0] }));
+      budget.appendChild(h("option", { value: String(o[0]), text: o[1], selected: (plan ? plan.budget : 60) === o[0] }));
     });
     var fill = h("input", { type: "checkbox", id: "p-fill", checked: plan ? plan.fill : true });
 
