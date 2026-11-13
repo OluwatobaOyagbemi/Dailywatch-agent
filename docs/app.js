@@ -147,7 +147,8 @@
         embeddable: v.embeddable !== false,
         older: !!v.older,
         published: typeof v.published === "string" ? v.published.slice(0, 10) : "",
-        note: cap(v.note || "", 200)
+        note: cap(v.note || "", 200),
+        latest: !!v.latest
       });
     });
     var week = [];
@@ -233,10 +234,14 @@
       if (d.day === today) li.setAttribute("aria-current", "date");
       els.weekList.appendChild(li);
     });
-    // "Edit your plan" → config.yaml in the repo, when hosted on GitHub Pages
+    // "Edit your plan": the in-browser planner for visitors, config.yaml in the repo for the owner
     var m = location.hostname.match(/^([A-Za-z0-9-]+)\.github\.io$/);
     var repo = location.pathname.split("/").filter(Boolean)[0];
-    if (m && repo && /^[A-Za-z0-9._-]+$/.test(repo)) {
+    if (session.editHref) {
+      els.editPlan.href = session.editHref;
+      els.editPlan.removeAttribute("target");
+      els.editPlan.hidden = false;
+    } else if (m && repo && /^[A-Za-z0-9._-]+$/.test(repo)) {
       els.editPlan.href = "https://github.com/" + m[1] + "/" + repo + "/blob/main/config.yaml";
       els.editPlan.hidden = false;
     }
@@ -274,6 +279,7 @@
       if (isNow) tags.appendChild(h("span", { class: "label label--accent", text: "Now playing" }));
       if (v.older && v.published) tags.appendChild(h("span", { class: "label", text: "From " + prettyDate(v.published, { month: "short", year: "numeric" }) }));
       if (isSkipped) tags.appendChild(h("span", { class: "label", text: "Skipped" }));
+      if (v.latest) tags.appendChild(h("span", { class: "label", text: "Latest upload" }));
       if (!v.embeddable) tags.appendChild(h("span", { class: "label", text: "Opens on YouTube" }));
 
       var text = h("span", { class: "queue__text" },
@@ -546,7 +552,7 @@
     if (s.date && s.date < localToday()) notice("This is the session from " + prettyDate(s.date) + ". Today's arrives " + (s.send_time ? "around " + s.send_time : "later today") + ".");
   }
 
-  function emptyState(s) {
+  function emptyState(s, title, text) {
     els.main.setAttribute("aria-busy", "false");
     session = s && s.date ? s : { date: "", weekday: "", theme: "", prompt: "", week: (s && s.week) || [], videos: [] };
     els.title.textContent = s && s.theme ? s.theme : "No session today";
@@ -559,8 +565,8 @@
     els.nowNote.hidden = true;
     els.nowPos.textContent = "Nothing scheduled";
     renderWeek();
-    showState(s && s.theme ? "Nothing new on this theme today" : "No session right now",
-      "Enjoy the time back. The next session arrives with your next daily message.", false);
+    showState(title || (s && s.theme ? "Nothing new on this theme today" : "No session right now"),
+      text || "Enjoy the time back. The next session arrives with your next daily message.", false);
     els.frame.classList.add("is-empty");
     els.stateOverlay.firstElementChild.insertBefore(svgIcon(ICON_MOON, "icon state__icon"), els.stateTitle);
   }
@@ -587,8 +593,68 @@
     })();
   }
 
-  fetchToday().then(function (data) {
-    var url = fromUrl();
+  // ── visitor mode: plan in the browser ────────────────────────────────────
+
+  var CONFIG = window.DW_CONFIG || {};
+  var HELPER = (/^https:\/\/[A-Za-z0-9.-]+(:\d+)?(\/[A-Za-z0-9._~\/-]*)?$/.test(CONFIG.helperUrl || "") ||
+                /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(CONFIG.helperUrl || ""))
+    ? CONFIG.helperUrl.replace(/\/+$/, "") : "";
+  var P = window.DWPlanner;
+
+  function resetHashAndReload() {
+    history.replaceState(null, "", location.pathname);
+    location.reload();
+  }
+
+  function showPlanner() {
+    document.querySelector(".pagehead").hidden = true;
+    document.querySelector(".notice-wrap").hidden = true;
+    els.main.hidden = true;
+    var root = $("planner");
+    root.hidden = false;
+    els.crumbDay.textContent = "Plan";
+    document.title = "Plan your week · Daily Watch";
+    P.render(root, { plan: P.load(), onSave: resetHashAndReload, onCancel: resetHashAndReload });
+    window.scrollTo(0, 0);
+  }
+
+  function startVisitor() {
+    var today = localToday();
+    els.crumbDay.textContent = titleCase(weekdayOf(today));
+    P.buildToday(P.load(), today, weekdayOf(today), HELPER).then(function (s) {
+      if (s.rest) {
+        emptyState(s, "Rest day", "No session today. Enjoy the time back, and come back tomorrow.");
+        els.title.textContent = "Rest day";
+        return;
+      }
+      if (!s.videos.length) {
+        emptyState(s, "Nothing to watch today", "Your creators haven't posted anything that fits this theme. Try adding a creator or two to this day.");
+        return;
+      }
+      start(s);
+      if (s.notices && s.notices.length) notice(s.notices.join(" "));
+    }).catch(function (err) {
+      els.main.setAttribute("aria-busy", "false");
+      els.title.textContent = "Couldn't load today's videos";
+      showState("Couldn't load today's videos", err.message, false);
+      var retry = h("button", { class: "btn btn--primary", type: "button", text: "Try again" });
+      retry.addEventListener("click", function () { location.reload(); });
+      els.stateOverlay.firstElementChild.appendChild(retry);
+    });
+  }
+
+  if (HELPER && P) {
+    $("footer-plan").hidden = false;
+    window.addEventListener("hashchange", function () {
+      if (location.hash === "#plan" || (location.hash === "" && !$("planner").hidden)) location.reload();
+    });
+  }
+
+  var ownerLink = fromUrl();
+  if (!ownerLink && HELPER && P) {
+    if (location.hash === "#plan" || !P.load()) showPlanner(); else startVisitor();
+  } else fetchToday().then(function (data) {
+    var url = ownerLink;
     if (url && (!data || data.date !== url.date)) {
       // Link is newer than the deployed today.json (GitHub Pages lags a minute or two).
       notice("Today's details are still publishing. Titles fill in shortly, and you can start watching now.");

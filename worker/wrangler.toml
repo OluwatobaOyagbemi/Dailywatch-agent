@@ -1,0 +1,9 @@
+# Daily Watch helper service. Deploy with:  npx wrangler deploy   (from this folder)
+# Then add the YouTube key as a secret:      npx wrangler secret put YOUTUBE_API_KEY
+name = "dailywatch-helper"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Sites allowed to call this service from a browser (comma-separated).
+ALLOWED_ORIGINS = "https://oluwatobaoyagbemi.github.io"

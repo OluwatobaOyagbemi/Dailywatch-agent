@@ -63,7 +63,7 @@ watch_page: true
 why_notes: true
 
 # Where to send. One or both of: telegram, email  (see README for the secrets each needs)
-deliver: [telegram, email]
+deliver: [telegram]
 
 # Your weekly plan. One entry per weekday. Leave a day out to make it a rest day.
 #   theme    - shown as the message header

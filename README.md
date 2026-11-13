@@ -43,12 +43,35 @@ My first instinct was to build an app with calendar sync and push notifications.
 <!-- Replace this comment with a screenshot of the Telegram message:
 ![Telegram message](docs/screenshot.png) -->
 
+## Use it in the browser (no GitHub)
+
+Anyone can open the live page, plan their week and start using it straight away:
+
+1. Open the page. First-time visitors see **Plan your week**.
+2. For each day, type a theme and the creators you trust (the part after `@` in `youtube.com/@name`). Leave a day blank or tick *Rest day* to skip it. Optionally add words to look for and a small task.
+3. Save. Each day, open the page (or add it to your home screen) and you get that day's short list.
+
+The plan is saved only in that browser. There's no account and no sign-up. To find videos, the page sends only that day's theme and creators to the Daily Watch helper service. Browser users don't get Telegram or email messages. For those, set up your own copy below.
+
+### The helper service (for whoever hosts the site)
+
+The browser planner needs the small helper in [`worker/`](worker/), a free Cloudflare Worker. It reads each creator's public YouTube feed, which uses no API allowance. It uses the YouTube API only for cheap lookups (finding a channel, getting video lengths) and for an occasional theme search, and caches results so repeat visits cost nothing. The YouTube key is stored as a Worker secret and never reaches the browser.
+
+```bash
+cd worker
+npx wrangler login                        # once, opens Cloudflare in your browser
+npx wrangler deploy                       # prints your helper URL
+npx wrangler secret put YOUTUBE_API_KEY   # paste a YouTube Data API key
+```
+
+Then put the printed URL in `docs/config.js` (`helperUrl`) and push. Using a separate YouTube key (from a separate Google Cloud project) keeps visitors from using up the daily allowance of your own Telegram send. Until `helperUrl` is set, the page shows only the owner's daily session.
+
 ## Watch page
 
 Each day's message links to your own watch page on GitHub Pages instead of YouTube. It has today's list and nothing else.
 
 - **A list that ends:** today's videos with thumbnails, lengths and progress, then *"End of today's list. Nothing more to scroll."*
-- **No YouTube rabbit holes:** videos play in a privacy-enhanced player. When one ends, the page shows its own *Up next* card in place of YouTube's grid of suggestions. When you pause, a resume screen covers YouTube's "More videos" strip, and the control bar stays usable.
+- **No YouTube rabbit holes:** videos play in a privacy-enhanced player. When one ends, the page shows its own *Up next* card in place of YouTube's grid of suggestions. When you pause, a resume screen covers the whole player, including YouTube's "More videos" strip.
 - **No autoplay:** you choose when the next video starts.
 - **Skip without guilt:** *Skip* (or `S`) marks a video "not for me". It counts toward finishing the session, and the next video is lined up, not autoplayed.
 - **A finish line:** once every video is watched or skipped (or you tap *Finish for today*), the page shows *"That's today."*, your reflection prompt and when tomorrow's session arrives. No other links.
