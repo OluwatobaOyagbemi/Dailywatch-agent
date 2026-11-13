@@ -3,8 +3,8 @@
 name = "dailywatch-helper"
 main = "src/index.js"
 compatibility_date = "2026-10-01"
+workers_dev = true
 
 [vars]
 # Sites allowed to call this service from a browser (comma-separated).
 ALLOWED_ORIGINS = "https://oluwatobaoyagbemi.github.io"
-workers_dev = true
