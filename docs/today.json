@@ -1,4 +1,27 @@
 {
-  "date": "",
-  "videos": []
+  "date": "2026-11-11",
+  "weekday": "wednesday",
+  "theme": "Relationship, Communication and Marriage",
+  "prompt": "Before you close this: write down one idea you'll use this week.",
+  "send_time": "12:00",
+  "videos": [
+    {
+      "id": "6uxeuy6jBvs",
+      "title": "Loving Others - Pst. Dolapo Lawal",
+      "channel": "Pastor Dolapo Lawal",
+      "minutes": 0,
+      "embeddable": true,
+      "older": false,
+      "published": ""
+    },
+    {
+      "id": "jBz-UbHEhMs",
+      "title": "HOW I GOT MARRIED AT 19 IN 200 LEVEL",
+      "channel": "Femi Lazarus",
+      "minutes": 0,
+      "embeddable": true,
+      "older": false,
+      "published": ""
+    }
+  ]
 }
