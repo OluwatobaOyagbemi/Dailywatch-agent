@@ -23,5 +23,42 @@
       "older": false,
       "published": ""
     }
+  ],
+  "week": [
+    {
+      "day": "monday",
+      "theme": "Public Speaking and Communication",
+      "rest": false
+    },
+    {
+      "day": "tuesday",
+      "theme": "Mentorship and Leadership",
+      "rest": false
+    },
+    {
+      "day": "wednesday",
+      "theme": "Relationship, Communication and Marriage",
+      "rest": false
+    },
+    {
+      "day": "thursday",
+      "theme": "Finance, Money and Business",
+      "rest": false
+    },
+    {
+      "day": "friday",
+      "theme": "Men's Conference and Fatherhood",
+      "rest": false
+    },
+    {
+      "day": "saturday",
+      "theme": "Music, Guitar and Voice Training",
+      "rest": false
+    },
+    {
+      "day": "sunday",
+      "theme": "Sermons",
+      "rest": false
+    }
   ]
 }
