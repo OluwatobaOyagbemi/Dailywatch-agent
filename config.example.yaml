@@ -57,6 +57,11 @@ max_api_units: 5000
 # published, links go straight to YouTube, so it's safe to leave on.
 watch_page: true
 
+# One-line "why watch this" note under each video, written by Claude, so you can
+# skip the ones that don't fit before tapping. Needs an ANTHROPIC_API_KEY repo
+# secret; without one the message is sent as usual, just without notes.
+why_notes: true
+
 # Where to send. One or both of: telegram, email  (see README for the secrets each needs)
 deliver: [telegram]
 
@@ -66,42 +71,49 @@ deliver: [telegram]
 #   creators - YouTube channel handles (the part after @ in the channel URL)
 #   search   - fallback search phrases, used only when creators_only is false
 #   prompt   - (optional) replaces the global prompt for that day
+#   task     - (optional) one small thing to do with what you watched
 days:
   monday:
     theme: Learn a Skill
     keywords: "tutorial how to beginner"
     creators: [freecodecamp, TED]
     search: ["learn a new skill"]
+    task: "Spend 20 minutes building along with today's tutorial."
 
   tuesday:
     theme: Leadership
     keywords: "leadership leader team"
     creators: [MaxwellLeadershipOfficial, TED]
     search: ["leadership principles"]
+    task: "Write down one leadership habit from today and practise it once before bed."
 
   wednesday:
     theme: Health and Fitness
     keywords: "workout fitness health"
     creators: [TED]
     search: ["beginner workout"]
+    task: "Do a 15-minute workout from today's videos."
 
   thursday:
     theme: Money
     keywords: "money finance investing budget"
     creators: [marktilbury]
     search: ["personal finance basics"]
+    task: "Spend 10 minutes on your money: check a balance, a budget line or one subscription."
 
   friday:
     theme: Public Speaking
     keywords: "public speaking storytelling presentation"
     creators: [TED, TEDx]
     search: ["public speaking tips"]
+    task: "Record a 60-second voice note explaining one idea from today's video."
 
   saturday:
     theme: Hobby
     keywords: "lesson tutorial"
     creators: [andycrowley]
     search: ["beginner guitar lesson"]
+    task: "Practise for 15 minutes: a warm-up plus the exercise from today's lesson."
 
   sunday:
     theme: Reflection
@@ -109,3 +121,4 @@ days:
     creators: [TED]
     search: ["mindset talk"]
     prompt: "What's one thing from this week you want to keep doing?"
+    task: "Plan next week: pick the one habit you'll focus on."

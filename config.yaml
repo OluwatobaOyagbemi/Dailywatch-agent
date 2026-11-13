@@ -57,6 +57,11 @@ max_api_units: 5000
 # published, links go straight to YouTube, so it's safe to leave on.
 watch_page: true
 
+# One-line "why watch this" note under each video, written by Claude, so you can
+# skip the ones that don't fit before tapping. Needs an ANTHROPIC_API_KEY repo
+# secret; without one the message is sent as usual, just without notes.
+why_notes: true
+
 # Where to send. One or both of: telegram, email  (see README for the secrets each needs)
 deliver: [telegram, email]
 
@@ -66,42 +71,49 @@ deliver: [telegram, email]
 #   creators - YouTube channel handles (the part after @ in the channel URL)
 #   search   - fallback search phrases, used only when creators_only is false
 #   prompt   - (optional) replaces the global prompt for that day
+#   task     - (optional) one small thing to do with what you watched
 days:
   monday:
     theme: Public Speaking and Communication
     keywords: "public speaking storytelling presentation communication"
     creators: [TED, philipp-humm, JoyceDaniels, TEDx]
     search: ["public speaking skills", "how to communicate confidently"]
+    task: "Record a 60-second voice note explaining one idea from today's video."
 
   tuesday:
     theme: Mentorship and Leadership
     keywords: "leadership leader mentor"
     creators: [MaxwellLeadershipOfficial, femi_lazarus, munroeglobal, SamAdeyemiTV]
     search: ["leadership principles", "mentorship"]
+    task: "Write down one leadership habit from today and practise it once before bed."
 
   wednesday:
     theme: Relationship, Communication and Marriage
     keywords: "marriage relationship love"
     creators: [EzinneZara, PastorDolapoLawal, femi_lazarus, munroeglobal]
     search: ["healthy relationships advice", "preparing for marriage"]
+    task: "Send one intentional message of appreciation to someone you care about."
 
   thursday:
     theme: Finance, Money and Business
     keywords: "money finance business wealth investing"
     creators: [marktilbury, adesinaassets, PastorPoju]
     search: ["biblical finance", "building a business"]
+    task: "Spend 10 minutes on your money: check a balance, a budget line or one subscription."
 
   friday:
     theme: Men's Conference and Fatherhood
     keywords: "men fatherhood father man manhood"
     creators: [munroeglobal, femi_lazarus]
     search: ["men's conference", "fatherhood sermon"]
+    task: "Write one sentence about the man and father you're becoming, and one action toward it this week."
 
   saturday:
     theme: Music, Guitar and Voice Training
     keywords: "guitar lesson vocal singing"
     creators: [andycrowley]
     search: ["vocal warm up exercises", "beginner guitar lesson", "singing technique"]
+    task: "Practise for 15 minutes: a warm-up plus the exercise from today's lesson."
 
   sunday:
     theme: Sermons
@@ -109,3 +121,4 @@ days:
     creators: [KoinoniaGlobal, CelebrationGlobalTV, femi_lazarus, PastorPoju]
     search: ["sunday sermon"]
     prompt: "What's one thing from this message you'll act on this week?"
+    task: "Write down the key line or scripture from today's message and one way you'll live it this week."

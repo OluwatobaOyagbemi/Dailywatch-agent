@@ -75,12 +75,13 @@ TOP_LEVEL = {
                              (isinstance(v, list) and bool(v) and all(isinstance(c, str) for c in v)
                               and set(v) <= CHANNELS),
                              "telegram, email, or [telegram, email]"),
+    "why_notes":            (lambda v: isinstance(v, bool), "true or false"),
     "watch_page":           (lambda v: isinstance(v, bool), "true or false"),
     "watch_page_url":       (lambda v: isinstance(v, str) and safe_page_url(v if v.endswith("/") else v + "/"),
                              "an https:// address, e.g. https://you.github.io/Dailywatch-agent/"),
     "days":                 (lambda v: isinstance(v, dict) and v, "a map of weekdays (monday: …)"),
 }
-DAY_KEYS = {"theme", "keywords", "creators", "search", "prompt"}
+DAY_KEYS = {"theme", "keywords", "creators", "search", "prompt", "task"}
 
 
 def _close_match(word, options):
@@ -139,9 +140,10 @@ def validate_config(cfg):
             if not isinstance(search, list) or len(search) > MAX_SEARCH_PER_DAY or \
                     not all(isinstance(q, str) and 0 < len(q) <= 100 for q in search):
                 problems.append(f"`{where}.search` must be a list of up to {MAX_SEARCH_PER_DAY} phrases")
-            p = d.get("prompt")
-            if p is not None and (not isinstance(p, str) or len(p) > 300):
-                problems.append(f"`{where}.prompt` must be text up to 300 characters")
+            for key, limit in (("prompt", 300), ("task", 200)):
+                val = d.get(key)
+                if val is not None and (not isinstance(val, str) or len(val) > limit):
+                    problems.append(f"`{where}.{key}` must be text up to {limit} characters")
             if not creators and (cfg.get("creators_only", False) or not search):
                 warnings.append(f"`{where}` has no creators, so it will always be empty")
 
@@ -225,10 +227,11 @@ def fit_telegram(build, videos):
 
 # ── code / runtime ───────────────────────────────────────────────────────────
 
-SECRET_ENV = ("YOUTUBE_API_KEY", "TELEGRAM_BOT_TOKEN", "SMTP_PASS")
+SECRET_ENV = ("YOUTUBE_API_KEY", "TELEGRAM_BOT_TOKEN", "SMTP_PASS", "ANTHROPIC_API_KEY")
 _PATTERNS = [
     (re.compile(r"(key=)[^&\s'\"]+"), r"\1[REDACTED]"),
     (re.compile(r"(bot)\d{5,15}:[A-Za-z0-9_-]{20,}"), r"\1[REDACTED]"),
+    (re.compile(r"sk-ant-[A-Za-z0-9_-]{10,}"), "[REDACTED]"),
 ]
 
 

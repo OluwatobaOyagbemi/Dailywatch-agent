@@ -28,7 +28,9 @@
     progressLabel: $("progress-label"), progressPct: $("progress-pct"),
     weekCard: $("week-card"), weekList: $("week-list"), editPlan: $("edit-plan"),
     avatar: $("post-avatar"), nowChannel: $("now-channel"), nowPos: $("now-position"),
-    nowBadge: $("now-badge"), nowTitle: $("now-title"),
+    nowBadge: $("now-badge"), nowTitle: $("now-title"), nowNote: $("now-note"),
+    skip: $("skip"), skipLabel: $("skip-label"), task: $("task"), taskText: $("task-text"),
+    finishTask: $("finish-task"), finishTaskText: $("finish-task-text"),
     frame: $("frame"), pause: $("pause-overlay"), nextOverlay: $("next-overlay"),
     nextTitle: $("next-title"), nextPlay: $("next-play"), nextFinish: $("next-finish"),
     blocked: $("blocked-overlay"), blockedOpen: $("blocked-open"), blockedDone: $("blocked-done"),
@@ -44,6 +46,7 @@
   var session = null;      // { date, weekday, theme, prompt, send_time, week, videos: [...] }
   var current = 0;
   var watched = new Set();
+  var skipped = new Set();
   var player = null;
   var playerReady = false;
   var pendingId = null;
@@ -77,6 +80,7 @@
   var ICON_PLAY = "M10 8.5v7l5.5-3.5z M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z";
   var ICON_CAL = "M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z";
   var ICON_MOON = "M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z";
+  var ICON_X = "M6 6l12 12M18 6L6 18";
 
   function fmtMinutes(m) {
     m = Math.round(m || 0);
@@ -119,10 +123,14 @@
     get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode: fine */ } }
   };
-  function loadWatched() {
-    try { return new Set(JSON.parse(store.get("dw:watched:" + session.date) || "[]")); } catch (e) { return new Set(); }
+  function loadSet(kind) {
+    try { return new Set(JSON.parse(store.get("dw:" + kind + ":" + session.date) || "[]")); } catch (e) { return new Set(); }
   }
-  function saveWatched() { store.set("dw:watched:" + session.date, JSON.stringify(Array.from(watched))); }
+  function saveSets() {
+    store.set("dw:watched:" + session.date, JSON.stringify(Array.from(watched)));
+    store.set("dw:skipped:" + session.date, JSON.stringify(Array.from(skipped)));
+  }
+  function isDone(id) { return watched.has(id) || skipped.has(id); }
 
   // ── data ──────────────────────────────────────────────────────────────────
 
@@ -138,7 +146,8 @@
         minutes: typeof v.minutes === "number" && v.minutes > 0 ? v.minutes : 0,
         embeddable: v.embeddable !== false,
         older: !!v.older,
-        published: typeof v.published === "string" ? v.published.slice(0, 10) : ""
+        published: typeof v.published === "string" ? v.published.slice(0, 10) : "",
+        note: cap(v.note || "", 200)
       });
     });
     var week = [];
@@ -150,6 +159,7 @@
       weekday: DAYS.indexOf(raw.weekday) !== -1 ? raw.weekday : "",
       theme: cap(raw.theme || "", 120),
       prompt: cap(raw.prompt || "", 300),
+      task: cap(raw.task || "", 200),
       send_time: /^\d{2}:\d{2}$/.test(raw.send_time || "") ? raw.send_time : "",
       week: week,
       videos: clean
@@ -162,9 +172,9 @@
     var ids = (q.get("v") || "").split(",").filter(function (x) { return ID_RE.test(x); }).slice(0, MAX_VIDEOS);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !ids.length) return null;
     return {
-      date: d, weekday: weekdayOf(d), theme: "", prompt: "", send_time: "", week: [],
+      date: d, weekday: weekdayOf(d), theme: "", prompt: "", task: "", send_time: "", week: [],
       videos: ids.map(function (id, i) {
-        return { id: id, title: "Video " + (i + 1), channel: "", minutes: 0, embeddable: true, older: false, published: "", placeholder: true };
+        return { id: id, title: "Video " + (i + 1), channel: "", minutes: 0, embeddable: true, older: false, published: "", note: "", placeholder: true };
       })
     };
   }
@@ -208,6 +218,7 @@
     if (total) els.meta.appendChild(metaItem(ICON_CLOCK, fmtMinutes(total) + " total"));
 
     if (session.prompt) { els.reflectText.textContent = session.prompt; els.reflect.hidden = false; }
+    if (session.task) { els.taskText.textContent = session.task; els.task.hidden = false; }
     renderWeek();
   }
 
@@ -233,24 +244,28 @@
   }
 
   function renderProgress() {
-    var v = session.videos, done = v.filter(function (x) { return watched.has(x.id); }).length;
-    var left = v.filter(function (x) { return !watched.has(x.id); }).reduce(function (s, x) { return s + x.minutes; }, 0);
+    var v = session.videos;
+    var nWatched = v.filter(function (x) { return watched.has(x.id); }).length;
+    var nSkipped = v.filter(function (x) { return skipped.has(x.id); }).length;
+    var done = nWatched + nSkipped;
+    var left = v.filter(function (x) { return !isDone(x.id); }).reduce(function (s, x) { return s + x.minutes; }, 0);
     var pct = v.length ? Math.round((done / v.length) * 100) : 0;
     els.progress.hidden = false;
     els.progressBar.setAttribute("aria-valuemax", String(v.length));
     els.progressBar.setAttribute("aria-valuenow", String(done));
     els.progressFill.style.width = pct + "%";
     els.progressPct.textContent = pct + "% complete";
+    var skippedText = nSkipped ? " · " + nSkipped + " skipped" : "";
     els.progressLabel.textContent = done === v.length
-      ? "All " + v.length + " watched"
-      : done + " of " + v.length + " watched" + (left ? " · " + fmtMinutes(left) + " left" : "");
+      ? (nSkipped ? nWatched + " watched" + skippedText : "All " + v.length + " watched")
+      : nWatched + " of " + v.length + " watched" + skippedText + (left ? " · " + fmtMinutes(left) + " left" : "");
     els.queueCount.textContent = done + "/" + v.length;
   }
 
   function renderQueue() {
     els.queueList.textContent = "";
     session.videos.forEach(function (v, i) {
-      var isDone = watched.has(v.id), isNow = i === current && els.finish.hidden;
+      var isWatched = watched.has(v.id), isSkipped = skipped.has(v.id), isNow = i === current && els.finish.hidden;
       var thumb = h("span", { class: "thumb" },
         h("img", { src: "https://i.ytimg.com/vi/" + v.id + "/mqdefault.jpg", alt: "", loading: "lazy", width: "320", height: "180" }));
       if (v.minutes) thumb.appendChild(h("span", { class: "thumb__time", text: fmtClock(v.minutes) }));
@@ -258,20 +273,23 @@
       var tags = h("span", { class: "queue__tags" });
       if (isNow) tags.appendChild(h("span", { class: "label label--accent", text: "Now playing" }));
       if (v.older && v.published) tags.appendChild(h("span", { class: "label", text: "From " + prettyDate(v.published, { month: "short", year: "numeric" }) }));
+      if (isSkipped) tags.appendChild(h("span", { class: "label", text: "Skipped" }));
       if (!v.embeddable) tags.appendChild(h("span", { class: "label", text: "Opens on YouTube" }));
 
       var text = h("span", { class: "queue__text" },
         h("span", { class: "queue__name", text: v.title }),
         v.channel ? h("span", { class: "queue__sub", text: v.channel }) : null,
+        v.note && !isSkipped ? h("span", { class: "queue__note", text: v.note }) : null,
         tags.childNodes.length ? tags : null);
 
-      var status = isDone ? h("span", { class: "status status--done", title: "Watched" }, svgIcon(ICON_CHECK))
+      var status = isWatched ? h("span", { class: "status status--done", title: "Watched" }, svgIcon(ICON_CHECK))
+        : isSkipped ? h("span", { class: "status status--skipped", title: "Skipped" }, svgIcon(ICON_X))
         : h("span", { class: "status" + (isNow ? " status--now" : ""), title: isNow ? "Now playing" : "Not watched yet" });
 
       var btn = h("button", { class: "queue__btn", type: "button",
-        "aria-label": (i + 1) + ". " + v.title + (isDone ? " (watched)" : "") }, thumb, text, status);
+        "aria-label": (i + 1) + ". " + v.title + (isWatched ? " (watched)" : isSkipped ? " (skipped)" : "") }, thumb, text, status);
       btn.addEventListener("click", function () { select(i, true); });
-      var li = h("li", { class: "queue__item" + (isDone ? " queue__item--done" : "") }, btn);
+      var li = h("li", { class: "queue__item" + (isWatched ? " queue__item--done" : "") + (isSkipped ? " queue__item--skipped" : "") }, btn);
       if (isNow) li.setAttribute("aria-current", "true");
       els.queueList.appendChild(li);
     });
@@ -287,13 +305,18 @@
     els.nowChannel.textContent = name;
     els.nowPos.textContent = "Video " + (current + 1) + " of " + session.videos.length + (v.minutes ? " · " + fmtMinutes(v.minutes) : "");
     els.nowTitle.textContent = v.placeholder ? "" : v.title;
-    var isDone = watched.has(v.id);
-    if (isDone) { els.nowBadge.textContent = "Watched"; els.nowBadge.className = "label label--success"; }
+    els.nowNote.textContent = v.note || "";
+    els.nowNote.hidden = !v.note;
+    var isWatched = watched.has(v.id), isSkipped = skipped.has(v.id);
+    if (isWatched) { els.nowBadge.textContent = "Watched"; els.nowBadge.className = "label label--success"; }
+    else if (isSkipped) { els.nowBadge.textContent = "Skipped"; els.nowBadge.className = "label"; }
     else if (v.older && v.published) { els.nowBadge.textContent = "From " + prettyDate(v.published, { month: "short", year: "numeric" }); els.nowBadge.className = "label"; }
-    els.nowBadge.hidden = !(isDone || (v.older && v.published));
+    els.nowBadge.hidden = !(isWatched || isSkipped || (v.older && v.published));
     els.info.hidden = false;
-    els.mark.setAttribute("aria-pressed", String(isDone));
-    els.markLabel.textContent = isDone ? "Watched" : "Mark watched";
+    els.mark.setAttribute("aria-pressed", String(isWatched));
+    els.markLabel.textContent = isWatched ? "Watched" : "Mark watched";
+    els.skip.setAttribute("aria-pressed", String(isSkipped));
+    els.skipLabel.textContent = isSkipped ? "Skipped" : "Skip";
     els.prev.disabled = current === 0;
     els.next.disabled = current === session.videos.length - 1;
   }
@@ -366,7 +389,7 @@
     var n = session.videos.length;
     for (var k = 1; k <= n; k++) {
       var i = (from + k) % n;
-      if (!watched.has(session.videos[i].id)) return i;
+      if (!isDone(session.videos[i].id)) return i;
     }
     return -1;
   }
@@ -408,29 +431,50 @@
     else if (player && playerReady) { play ? player.loadVideoById(v.id) : player.cueVideoById(v.id); }
     else if (play) pendingId = v.id;
     els.reflect.hidden = !session.prompt;
+    els.task.hidden = !session.task;
     renderAll();
     if (play && window.matchMedia("(max-width: 899px)").matches) $("post").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function markWatched(id, value) {
-    if (value) watched.add(id); else watched.delete(id);
-    saveWatched();
+    if (value) { watched.add(id); skipped.delete(id); } else watched.delete(id);
+    saveSets();
     renderAll();
+  }
+
+  function markSkipped(id, value) {
+    if (value) { skipped.add(id); watched.delete(id); } else skipped.delete(id);
+    saveSets();
+    renderAll();
+  }
+
+  function skipCurrent() {
+    var id = session.videos[current].id, now = !skipped.has(id);
+    markSkipped(id, now);
+    if (!now) return;
+    if (player && playerReady && player.pauseVideo) player.pauseVideo();
+    var i = nextUnwatched(current);
+    if (i === -1) showFinish(); else select(i, false);   // cue the next one; you press play
   }
 
   function showFinish() {
     hideOverlays();
     if (player && playerReady && player.stopVideo) player.stopVideo();
     var v = session.videos, done = v.filter(function (x) { return watched.has(x.id); });
+    var nSkipped = v.filter(function (x) { return skipped.has(x.id); }).length;
     var mins = done.reduce(function (s, x) { return s + x.minutes; }, 0);
-    els.finishSummary.textContent = done.length
-      ? "You watched " + done.length + " of " + v.length + (mins ? " · " + fmtMinutes(mins) : "") + ". Nothing else to see here."
-      : "No videos watched this time, and that's fine. Nothing else to see here.";
+    els.finishSummary.textContent = (done.length
+      ? "You watched " + done.length + " of " + v.length + (mins ? " · " + fmtMinutes(mins) : "")
+      : "No videos watched this time, and that's fine")
+      + (nSkipped ? " (" + nSkipped + " skipped)" : "") + ". Nothing else to see here.";
+    els.finishTask.hidden = !session.task;
+    els.finishTaskText.textContent = session.task || "";
     els.finishPrompt.hidden = !session.prompt;
     els.finishPrompt.textContent = session.prompt || "";
     els.finishNext.textContent = "Tomorrow's session arrives " + (session.send_time ? "around " + session.send_time : "tomorrow") + ". You can close this tab.";
     els.info.hidden = true;
     els.nowTitle.textContent = "";
+    els.nowNote.hidden = true;
     els.avatar.className = "avatar";
     els.avatar.style.background = "var(--success-emph)";
     els.avatar.textContent = "✓";
@@ -438,6 +482,7 @@
     els.nowPos.textContent = prettyDate(session.date);
     els.nowBadge.hidden = true;
     els.reflect.hidden = true;
+    els.task.hidden = true;
     els.finish.hidden = false;
     els.frame.classList.add("is-finished");
     els.frame.style.backgroundImage = "none";
@@ -461,6 +506,7 @@
     markWatched(id, now);
     if (now && nextUnwatched(current) === -1) showFinish();
   });
+  els.skip.addEventListener("click", skipCurrent);
   document.addEventListener("keydown", function (e) {
     if (!session || !session.videos.length || e.metaKey || e.ctrlKey || e.altKey) return;
     var tag = (e.target && e.target.tagName) || "";
@@ -469,6 +515,7 @@
     if (k === "n") select(current + 1, true);
     else if (k === "p") select(current - 1, true);
     else if (k === "m" && els.finish.hidden) els.mark.click();
+    else if (k === "s" && els.finish.hidden) skipCurrent();
   });
 
   els.themeToggle.addEventListener("click", function () {
@@ -484,7 +531,8 @@
 
   function start(s) {
     session = s;
-    watched = loadWatched();
+    watched = loadSet("watched");
+    skipped = loadSet("skipped");
     var fromHash = parseInt((location.hash || "").slice(1), 10) - 1;
     current = fromHash >= 0 && fromHash < s.videos.length ? fromHash : Math.max(0, nextUnwatched(-1));
     els.main.setAttribute("aria-busy", "false");
@@ -492,7 +540,7 @@
     hideOverlays();
     poster(s.videos[current]);
     renderAll();
-    if (watched.size && nextUnwatched(-1) === -1 && !(fromHash >= 0)) showFinish();
+    if ((watched.size || skipped.size) && nextUnwatched(-1) === -1 && !(fromHash >= 0)) showFinish();
     else if (!s.videos[current].embeddable) showBlocked(s.videos[current], false);
     loadYouTubeApi();
     if (s.date && s.date < localToday()) notice("This is the session from " + prettyDate(s.date) + ". Today's arrives " + (s.send_time ? "around " + s.send_time : "later today") + ".");
@@ -508,6 +556,7 @@
     els.avatar.style.background = "var(--accent)";
     els.avatar.textContent = "☾";
     els.nowChannel.textContent = "Daily Watch";
+    els.nowNote.hidden = true;
     els.nowPos.textContent = "Nothing scheduled";
     renderWeek();
     showState(s && s.theme ? "Nothing new on this theme today" : "No session right now",
@@ -529,7 +578,7 @@
               var m = byId[v.id];
               if (m) { Object.assign(v, m); v.placeholder = false; }
             });
-            ["theme", "prompt", "send_time", "weekday", "week"].forEach(function (k) { urlSession[k] = d[k]; });
+            ["theme", "prompt", "task", "send_time", "weekday", "week"].forEach(function (k) { urlSession[k] = d[k]; });
             notice("");
             renderHeader(); renderAll();
           } else retry();
