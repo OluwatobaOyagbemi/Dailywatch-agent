@@ -515,6 +515,8 @@ def page_data(day, weekday, day_cfg, cfg, videos):
         "theme": day_cfg["theme"],
         "prompt": day_prompt(day_cfg, cfg),
         "send_time": f"{int(hour):02d}:00" if hour.isdigit() and int(hour) < 24 else "",
+        "week": [{"day": d, "theme": ((cfg.get("days") or {}).get(d) or {}).get("theme", ""),
+                  "rest": d not in (cfg.get("days") or {})} for d in WEEKDAYS],
         "videos": [{
             "id": v["id"],
             "title": v["title"],

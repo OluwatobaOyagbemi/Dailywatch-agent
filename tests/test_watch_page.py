@@ -72,6 +72,9 @@ def test_page_data_shape(monkeypatch, tmp_path):
     monkeypatch.setenv("SEND_HOUR", "12")
     data = w.page_data("2026-11-13", "friday", {"theme": "Fatherhood", "prompt": "One action?"}, {}, VIDS)
     assert data["send_time"] == "12:00" and data["prompt"] == "One action?"
+    assert [d["day"] for d in data["week"]] == w.WEEKDAYS and all(d["rest"] for d in data["week"])
+    full = w.page_data("2026-11-13", "friday", {"theme": "F"}, {"days": {"friday": {"theme": "F"}}}, VIDS)
+    assert full["week"][4] == {"day": "friday", "theme": "F", "rest": False}
     assert data["videos"][0] == {"id": "abcDEF12345", "title": "One", "channel": "C1", "minutes": 12.0,
                                  "embeddable": True, "older": True, "published": "2024-03-01"}
     assert data["videos"][1]["embeddable"] is False
