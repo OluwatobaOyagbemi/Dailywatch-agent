@@ -547,3 +547,4 @@ kbd {
 .reminder__outlook { display: grid; gap: 8px; padding-top: 10px; border-top: 1px dashed var(--border-muted); }
 .reminder__sub { font-size: 13px; font-weight: 600; }
 .reminder__note { font-size: 12px; color: var(--text-3); }
+.reminder__group { display: grid; gap: 6px; padding-top: 10px; border-top: 1px dashed var(--border-muted); }
