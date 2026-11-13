@@ -17,7 +17,7 @@
   var DEFAULT_PROMPT = "Before you close this: write down one idea you'll use this week.";
 
   var EXAMPLE = {
-    v: 1, perDay: 3, budget: 60, fill: true,
+    v: 1, perDay: 3, budget: 0, fill: true,
     days: {
       monday: { theme: "Public speaking", keywords: "public speaking storytelling presentation", creators: ["TED", "TEDx"], task: "Record a 60-second voice note explaining one idea from today's video." },
       tuesday: { theme: "Leadership", keywords: "leadership leader team", creators: ["MaxwellLeadershipOfficial", "TED"], task: "Write down one leadership habit and practise it once today." },
@@ -52,7 +52,7 @@
     var plan = {
       v: 1,
       perDay: Math.min(10, Math.max(1, parseInt(raw.perDay, 10) || 3)),
-      budget: raw.budget === undefined ? 60 : Math.min(600, Math.max(0, parseInt(raw.budget, 10) || 0)),
+      budget: Math.min(600, Math.max(0, parseInt(raw.budget, 10) || 0)),
       fill: raw.fill !== false,
       days: {}
     };
@@ -225,7 +225,7 @@
     for (var n = 1; n <= 10; n++) perDay.appendChild(h("option", { value: String(n), text: n + (n === 1 ? " video" : " videos"), selected: (plan ? plan.perDay : 3) === n }));
     var budget = h("select", { id: "p-budget" });
     [[0, "No limit"], [15, "15 minutes"], [30, "30 minutes"], [45, "45 minutes"], [60, "1 hour"], [90, "1.5 hours"], [120, "2 hours"]].forEach(function (o) {
-      budget.appendChild(h("option", { value: String(o[0]), text: o[1], selected: (plan ? plan.budget : 60) === o[0] }));
+      budget.appendChild(h("option", { value: String(o[0]), text: o[1], selected: (plan ? plan.budget : 0) === o[0] }));
     });
     var fill = h("input", { type: "checkbox", id: "p-fill", checked: plan ? plan.fill : true });
 
