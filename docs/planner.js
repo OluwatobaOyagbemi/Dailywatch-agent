@@ -487,8 +487,8 @@
       var label = new Date(2000, 0, 1, Math.floor(m / 60), m % 60).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
       time.appendChild(h("option", { value: v, text: label, selected: plan.reminderTime === v }));
     }
-    var ics = h("button", { class: "btn btn--primary btn--sm", type: "button", text: "Apple / Outlook (.ics)" });
-    var google = h("a", { class: "btn btn--outline btn--sm", target: "_blank", rel: "noopener noreferrer", text: "Google Calendar" });
+    var ics = h("button", { class: "btn btn--outline btn--sm", type: "button", text: "Apple Calendar or other (.ics file)" });
+    var google = h("a", { class: "btn btn--primary btn--sm", target: "_blank", rel: "noopener noreferrer", text: "Google Calendar" });
     var when = h("p", { class: "reminder__when" });
     var help = h("div", { class: "reminder__help", hidden: "hidden" },
       h("p", { text: "Saved as daily-watch-reminder.ics. Open it to add the reminder." }),
@@ -497,8 +497,8 @@
 
     var outlook = null, olPersonal, olWork, olCopy, olHelp;
     if (helperUrl) {
-      olPersonal = h("a", { class: "btn btn--outline btn--sm", target: "_blank", rel: "noopener noreferrer", text: "Outlook.com" });
-      olWork = h("a", { class: "btn btn--outline btn--sm", target: "_blank", rel: "noopener noreferrer", text: "Work or school" });
+      olPersonal = h("a", { class: "btn btn--primary btn--sm", target: "_blank", rel: "noopener noreferrer", text: "Outlook (personal)" });
+      olWork = h("a", { class: "btn btn--primary btn--sm", target: "_blank", rel: "noopener noreferrer", text: "Outlook (work or school)" });
       olCopy = h("button", { class: "link-btn", type: "button", text: "Copy link" });
       olHelp = h("p", { class: "reminder__note", text: "If Outlook asks for a link: Calendar → Add calendar → Subscribe from web → paste it. It then appears in the Outlook app on your phone too." });
       olCopy.addEventListener("click", function () {
@@ -507,8 +507,8 @@
         if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { window.prompt("Copy this link:", link); });
         else window.prompt("Copy this link:", link);
       });
-      outlook = h("div", { class: "reminder__outlook" },
-        h("p", { class: "reminder__sub", text: "Subscribe in Outlook" }),
+      outlook = h("div", { class: "reminder__group" },
+        h("p", { class: "reminder__sub", text: "Outlook" }),
         h("div", { class: "reminder__actions" }, olPersonal, olWork, olCopy),
         olHelp);
     }
@@ -542,9 +542,14 @@
     root.appendChild(h("div", { class: "reminder__body" },
       h("p", { class: "reminder__lead", text: "Let today's list come to you. Add one repeating reminder to your calendar, and tap it to open this page." }),
       h("label", { class: "reminder__row" }, h("span", { text: "Remind me at" }), time),
-      h("div", { class: "reminder__actions" }, ics, google),
-      help,
+      h("div", { class: "reminder__group" },
+        h("p", { class: "reminder__sub", text: "Google" }),
+        h("div", { class: "reminder__actions" }, google)),
       outlook,
+      h("div", { class: "reminder__group" },
+        h("p", { class: "reminder__sub", text: "iPhone, Mac or any other calendar" }),
+        h("div", { class: "reminder__actions" }, ics),
+        help),
       when));
     root.hidden = false;
   }
