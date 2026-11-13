@@ -337,6 +337,86 @@
 
   function icsText(s) { return String(s).replace(/\\/g, "\\\\").replace(/[,;]/g, "\\$&").replace(/\r?\n/g, "\\n"); }
 
+  // ── timezone support (Outlook needs a real TZID + VTIMEZONE, not a floating time) ──
+
+  function viewerZone() {
+    try {
+      var z = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      return /^[A-Za-z0-9_+\-\/]{1,64}$/.test(z || "") ? z : "";
+    } catch (e) { return ""; }
+  }
+
+  function offsetMinutes(date) { return -date.getTimezoneOffset(); }
+
+  function fmtOffset(min) {
+    var sign = min >= 0 ? "+" : "-", a = Math.abs(min);
+    return sign + pad(Math.floor(a / 60)) + pad(a % 60);
+  }
+
+  /** Find the exact local moments this year when the UTC offset changes (DST transitions). */
+  function transitions(year) {
+    var out = [];
+    var prev = offsetMinutes(new Date(year, 0, 1, 12));
+    for (var day = 1; day <= 366; day++) {
+      var noon = new Date(year, 0, day, 12);
+      if (noon.getFullYear() !== year) break;
+      var off = offsetMinutes(noon);
+      if (off !== prev) {
+        // narrow to the hour within the previous 24h
+        var lo = new Date(noon.getTime() - 86400000).getTime(), hi = noon.getTime();
+        while (hi - lo > 60000) {
+          var mid = Math.floor((lo + hi) / 2);
+          if (offsetMinutes(new Date(mid)) === prev) lo = mid; else hi = mid;
+        }
+        out.push({ at: new Date(hi), from: prev, to: off });
+        prev = off;
+      }
+    }
+    return out;
+  }
+
+  /** RRULE for a yearly transition, e.g. 2nd Sunday of March or last Sunday of October. */
+  function yearlyRule(d) {
+    var dayCode = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][d.getDay()];
+    var lastWeek = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() - d.getDate() < 7;
+    var nth = lastWeek ? -1 : Math.ceil(d.getDate() / 7);
+    return "FREQ=YEARLY;BYMONTH=" + (d.getMonth() + 1) + ";BYDAY=" + nth + dayCode;
+  }
+
+  /** VTIMEZONE lines for the viewer's zone (DST rules derived from this year's transitions). */
+  function vtimezone(tzid, year) {
+    var lines = ["BEGIN:VTIMEZONE", "TZID:" + tzid];
+    var tr = transitions(year);
+    if (tr.length < 2) {
+      var off = fmtOffset(offsetMinutes(new Date(year, 0, 1, 12)));
+      lines.push("BEGIN:STANDARD", "DTSTART:19700101T000000", "TZOFFSETFROM:" + off, "TZOFFSETTO:" + off, "END:STANDARD");
+    } else {
+      tr.slice(0, 2).forEach(function (t) {
+        var kind = t.to > t.from ? "DAYLIGHT" : "STANDARD";
+        // wall-clock time of the change, on the clock it changes FROM (e.g. 02:00)
+        var w = new Date(t.at.getTime() + t.from * 60000);
+        var wallStamp = w.getUTCFullYear() + pad(w.getUTCMonth() + 1) + pad(w.getUTCDate()) + "T" +
+          pad(w.getUTCHours()) + pad(w.getUTCMinutes()) + "00";
+        var wallDate = new Date(w.getUTCFullYear(), w.getUTCMonth(), w.getUTCDate());
+        lines.push("BEGIN:" + kind, "DTSTART:" + wallStamp, "RRULE:" + yearlyRule(wallDate),
+          "TZOFFSETFROM:" + fmtOffset(t.from), "TZOFFSETTO:" + fmtOffset(t.to), "END:" + kind);
+      });
+    }
+    lines.push("END:VTIMEZONE");
+    return lines;
+  }
+
+  /** Fold lines longer than 75 bytes, as RFC 5545 requires (Outlook is strict about this). */
+  function fold(line) {
+    var enc = new TextEncoder(), out = [], cur = "", limit = 75;
+    Array.from(line).forEach(function (ch) {
+      if (enc.encode(cur + ch).length > limit) { out.push(cur); cur = " " + ch; limit = 75; }
+      else cur += ch;
+    });
+    out.push(cur);
+    return out.join("\r\n");
+  }
+
   var REMINDER_TITLE = "Daily Watch: today's session";
   function reminderDetails(pageUrl) {
     return "Your short list for today is ready. Open it here: " + pageUrl + "\nWatch, try the task, and you're done.";
@@ -349,20 +429,23 @@
     var end = new Date(start.getTime() + 15 * 60000);
     var utc = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
     var uid = "dailywatch-" + utc + "-" + Math.random().toString(36).slice(2, 10) + "@dailywatch";
+    var tzid = viewerZone();
+    var at = tzid ? ";TZID=" + tzid + ":" : ":";
     return [
-      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Daily Watch//Reminder//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Daily Watch//Reminder//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"
+    ].concat(tzid ? vtimezone(tzid, start.getFullYear()) : []).concat([
       "BEGIN:VEVENT",
       "UID:" + uid,
       "DTSTAMP:" + utc,
-      "DTSTART:" + stamp(start),
-      "DTEND:" + stamp(end),
+      "DTSTART" + at + stamp(start),
+      "DTEND" + at + stamp(end),
       "RRULE:" + rrule(plan),
       "SUMMARY:" + icsText(REMINDER_TITLE),
       "DESCRIPTION:" + icsText(reminderDetails(pageUrl)),
       "URL:" + pageUrl,
       "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + icsText(REMINDER_TITLE), "TRIGGER:PT0M", "END:VALARM",
-      "END:VEVENT", "END:VCALENDAR", ""
-    ].join("\r\n");
+      "END:VEVENT", "END:VCALENDAR"
+    ]).map(fold).join("\r\n") + "\r\n";
   }
 
   function googleCalendarUrl(plan, pageUrl, now) {
@@ -372,6 +455,7 @@
       action: "TEMPLATE", text: REMINDER_TITLE, dates: stamp(start) + "/" + stamp(end),
       details: reminderDetails(pageUrl), recur: "RRULE:" + rrule(plan)
     });
+    if (viewerZone()) q.set("ctz", viewerZone());
     return "https://calendar.google.com/calendar/render?" + q.toString();
   }
 
@@ -393,6 +477,10 @@
     var ics = h("button", { class: "btn btn--primary btn--sm", type: "button", text: "Apple / Outlook (.ics)" });
     var google = h("a", { class: "btn btn--outline btn--sm", target: "_blank", rel: "noopener noreferrer", text: "Google Calendar" });
     var when = h("p", { class: "reminder__when" });
+    var help = h("div", { class: "reminder__help", hidden: "hidden" },
+      h("p", { text: "Saved as daily-watch-reminder.ics. Open it to add the reminder." }),
+      h("p", { text: "Outlook on the web: Calendar → Add calendar → Upload from file → choose the file." }),
+      h("p", { text: "Outlook for Windows or Mac: double-click the file, then Save & Close." }));
 
     function refresh() {
       google.href = googleCalendarUrl(plan, pageUrl);
@@ -409,6 +497,7 @@
       document.body.appendChild(a);
       a.click();
       setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      help.hidden = false;
     });
     refresh();
 
@@ -418,6 +507,7 @@
       h("p", { class: "reminder__lead", text: "Let today's list come to you. Add one repeating reminder to your calendar, and tap it to open this page." }),
       h("label", { class: "reminder__row" }, h("span", { text: "Remind me at" }), time),
       h("div", { class: "reminder__actions" }, ics, google),
+      help,
       when));
     root.hidden = false;
   }

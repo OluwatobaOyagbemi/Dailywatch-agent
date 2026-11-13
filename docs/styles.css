@@ -542,3 +542,5 @@ kbd {
 .reminder__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .btn--sm { height: 32px; padding: 0 12px; font-size: 13px; }
 .reminder__when { font-size: 12px; color: var(--text-3); }
+.reminder__help { display: grid; gap: 4px; padding: 10px 12px; border-radius: var(--radius-sm);
+  background: var(--surface-2); border: 1px solid var(--border-muted); font-size: 12.5px; color: var(--text-2); }
