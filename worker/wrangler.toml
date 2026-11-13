@@ -8,3 +8,5 @@ workers_dev = true
 [vars]
 # Sites allowed to call this service from a browser (comma-separated).
 ALLOWED_ORIGINS = "https://oluwatobaoyagbemi.github.io"
+# The page reminders link to.
+SITE_URL = "https://oluwatobaoyagbemi.github.io/Dailywatch-agent/"

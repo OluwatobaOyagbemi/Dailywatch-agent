@@ -466,7 +466,20 @@
   }
 
   /** The "Daily reminder" box for a visitor's session page. */
-  function renderReminder(root, plan, pageUrl) {
+  /** Calendar-feed URL on the helper, for Outlook subscriptions. */
+  function feedUrl(plan, helperUrl) {
+    var q = new URLSearchParams({
+      days: plannedDays(plan).map(function (d) { return ICS_DAY[d]; }).join(","),
+      t: plan.reminderTime, tz: viewerZone() || "UTC"
+    });
+    return helperUrl + "/reminder.ics?" + q.toString();
+  }
+
+  function outlookUrl(host, feed) {
+    return "https://" + host + "/calendar/0/addfromweb?" + new URLSearchParams({ url: feed, name: "Daily Watch" }).toString();
+  }
+
+  function renderReminder(root, plan, pageUrl, helperUrl) {
     root.textContent = "";
     var time = h("select", { id: "reminder-time", "aria-label": "Reminder time" });
     for (var m = 5 * 60; m <= 22 * 60; m += 30) {
@@ -482,8 +495,31 @@
       h("p", { text: "Outlook on the web: Calendar → Add calendar → Upload from file → choose the file." }),
       h("p", { text: "Outlook for Windows or Mac: double-click the file, then Save & Close." }));
 
+    var outlook = null, olPersonal, olWork, olCopy, olHelp;
+    if (helperUrl) {
+      olPersonal = h("a", { class: "btn btn--outline btn--sm", target: "_blank", rel: "noopener noreferrer", text: "Outlook.com" });
+      olWork = h("a", { class: "btn btn--outline btn--sm", target: "_blank", rel: "noopener noreferrer", text: "Work or school" });
+      olCopy = h("button", { class: "link-btn", type: "button", text: "Copy link" });
+      olHelp = h("p", { class: "reminder__note", text: "If Outlook asks for a link: Calendar → Add calendar → Subscribe from web → paste it. It then appears in the Outlook app on your phone too." });
+      olCopy.addEventListener("click", function () {
+        var link = feedUrl(plan, helperUrl);
+        var done = function () { olCopy.textContent = "Link copied"; setTimeout(function () { olCopy.textContent = "Copy link"; }, 2000); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { window.prompt("Copy this link:", link); });
+        else window.prompt("Copy this link:", link);
+      });
+      outlook = h("div", { class: "reminder__outlook" },
+        h("p", { class: "reminder__sub", text: "Subscribe in Outlook" }),
+        h("div", { class: "reminder__actions" }, olPersonal, olWork, olCopy),
+        olHelp);
+    }
+
     function refresh() {
       google.href = googleCalendarUrl(plan, pageUrl);
+      if (outlook) {
+        var feed = feedUrl(plan, helperUrl);
+        olPersonal.href = outlookUrl("outlook.live.com", feed);
+        olWork.href = outlookUrl("outlook.office.com", feed);
+      }
       when.textContent = "Repeats " + dayRange(plan) + ". If you change your days later, add it again.";
     }
     time.addEventListener("change", function () {
@@ -508,6 +544,7 @@
       h("label", { class: "reminder__row" }, h("span", { text: "Remind me at" }), time),
       h("div", { class: "reminder__actions" }, ics, google),
       help,
+      outlook,
       when));
     root.hidden = false;
   }
