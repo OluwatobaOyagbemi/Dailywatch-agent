@@ -54,6 +54,7 @@
       perDay: Math.min(10, Math.max(1, parseInt(raw.perDay, 10) || 3)),
       budget: Math.min(600, Math.max(0, parseInt(raw.budget, 10) || 0)),
       fill: raw.fill !== false,
+      reminderTime: /^([01]\d|2[0-3]):[0-5]\d$/.test(raw.reminderTime || "") ? raw.reminderTime : "12:00",
       days: {}
     };
     DAYS.forEach(function (d) {
@@ -303,8 +304,127 @@
     });
   }
 
+  // ── calendar reminder ─────────────────────────────────────────────────────
+
+  var ICS_DAY = { monday: "MO", tuesday: "TU", wednesday: "WE", thursday: "TH", friday: "FR", saturday: "SA", sunday: "SU" };
+
+  function plannedDays(plan) {
+    return DAYS.filter(function (d) { return plan.days[d]; });
+  }
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+
+  /** Next planned day at the reminder time (local, "floating" so calendars use the viewer's timezone). */
+  function firstOccurrence(plan, now) {
+    var t = plan.reminderTime.split(":");
+    var days = plannedDays(plan);
+    for (var i = 0; i < 8; i++) {
+      var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, +t[0], +t[1]);
+      var name = DAYS[(d.getDay() + 6) % 7];
+      if (days.indexOf(name) !== -1 && d > now) return d;
+    }
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, +t[0], +t[1]);
+  }
+
+  function stamp(d) {
+    return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "T" + pad(d.getHours()) + pad(d.getMinutes()) + "00";
+  }
+
+  function rrule(plan) {
+    var days = plannedDays(plan).map(function (d) { return ICS_DAY[d]; });
+    return days.length === 7 ? "FREQ=DAILY" : "FREQ=WEEKLY;BYDAY=" + days.join(",");
+  }
+
+  function icsText(s) { return String(s).replace(/\\/g, "\\\\").replace(/[,;]/g, "\\$&").replace(/\r?\n/g, "\\n"); }
+
+  var REMINDER_TITLE = "Daily Watch: today's session";
+  function reminderDetails(pageUrl) {
+    return "Your short list for today is ready. Open it here: " + pageUrl + "\nWatch, try the task, and you're done.";
+  }
+
+  /** iCalendar file with one repeating 15-minute event on the planned days, alerting at its start. */
+  function buildIcs(plan, pageUrl, now) {
+    now = now || new Date();
+    var start = firstOccurrence(plan, now);
+    var end = new Date(start.getTime() + 15 * 60000);
+    var utc = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    var uid = "dailywatch-" + utc + "-" + Math.random().toString(36).slice(2, 10) + "@dailywatch";
+    return [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Daily Watch//Reminder//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      "UID:" + uid,
+      "DTSTAMP:" + utc,
+      "DTSTART:" + stamp(start),
+      "DTEND:" + stamp(end),
+      "RRULE:" + rrule(plan),
+      "SUMMARY:" + icsText(REMINDER_TITLE),
+      "DESCRIPTION:" + icsText(reminderDetails(pageUrl)),
+      "URL:" + pageUrl,
+      "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + icsText(REMINDER_TITLE), "TRIGGER:PT0M", "END:VALARM",
+      "END:VEVENT", "END:VCALENDAR", ""
+    ].join("\r\n");
+  }
+
+  function googleCalendarUrl(plan, pageUrl, now) {
+    var start = firstOccurrence(plan, now || new Date());
+    var end = new Date(start.getTime() + 15 * 60000);
+    var q = new URLSearchParams({
+      action: "TEMPLATE", text: REMINDER_TITLE, dates: stamp(start) + "/" + stamp(end),
+      details: reminderDetails(pageUrl), recur: "RRULE:" + rrule(plan)
+    });
+    return "https://calendar.google.com/calendar/render?" + q.toString();
+  }
+
+  function dayRange(plan) {
+    var days = plannedDays(plan);
+    if (days.length === 7) return "every day";
+    return days.map(function (d) { return titleCase(d).slice(0, 3); }).join(", ");
+  }
+
+  /** The "Daily reminder" box for a visitor's session page. */
+  function renderReminder(root, plan, pageUrl) {
+    root.textContent = "";
+    var time = h("select", { id: "reminder-time", "aria-label": "Reminder time" });
+    for (var m = 5 * 60; m <= 22 * 60; m += 30) {
+      var v = pad(Math.floor(m / 60)) + ":" + pad(m % 60);
+      var label = new Date(2000, 0, 1, Math.floor(m / 60), m % 60).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      time.appendChild(h("option", { value: v, text: label, selected: plan.reminderTime === v }));
+    }
+    var ics = h("button", { class: "btn btn--primary btn--sm", type: "button", text: "Apple / Outlook (.ics)" });
+    var google = h("a", { class: "btn btn--outline btn--sm", target: "_blank", rel: "noopener noreferrer", text: "Google Calendar" });
+    var when = h("p", { class: "reminder__when" });
+
+    function refresh() {
+      google.href = googleCalendarUrl(plan, pageUrl);
+      when.textContent = "Repeats " + dayRange(plan) + ". If you change your days later, add it again.";
+    }
+    time.addEventListener("change", function () {
+      plan.reminderTime = time.value;
+      save(plan);
+      refresh();
+    });
+    ics.addEventListener("click", function () {
+      var blob = new Blob([buildIcs(plan, pageUrl)], { type: "text/calendar;charset=utf-8" });
+      var a = h("a", { href: URL.createObjectURL(blob), download: "daily-watch-reminder.ics" });
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    });
+    refresh();
+
+    root.appendChild(h("div", { class: "box__head" },
+      h("h2", { class: "box__title", text: "Daily reminder" })));
+    root.appendChild(h("div", { class: "reminder__body" },
+      h("p", { class: "reminder__lead", text: "Let today's list come to you. Add one repeating reminder to your calendar, and tap it to open this page." }),
+      h("label", { class: "reminder__row" }, h("span", { text: "Remind me at" }), time),
+      h("div", { class: "reminder__actions" }, ics, google),
+      when));
+    root.hidden = false;
+  }
+
   window.DWPlanner = {
     DAYS: DAYS, load: load, save: save, clear: clear, normalize: normalize, parseHandle: parseHandle,
-    toWeek: toWeek, pick: pick, buildToday: buildToday, render: render, EXAMPLE: EXAMPLE
+    toWeek: toWeek, pick: pick, buildToday: buildToday, render: render, EXAMPLE: EXAMPLE,
+    buildIcs: buildIcs, googleCalendarUrl: googleCalendarUrl, renderReminder: renderReminder
   };
 })();
