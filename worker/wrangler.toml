@@ -7,3 +7,4 @@ compatibility_date = "2026-10-01"
 [vars]
 # Sites allowed to call this service from a browser (comma-separated).
 ALLOWED_ORIGINS = "https://oluwatobaoyagbemi.github.io"
+workers_dev = true
