@@ -13,17 +13,22 @@
   "use strict";
 
   var ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
+  var DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
   var MAX_VIDEOS = 10;
   var RETRY_MS = 20000;
   var RETRY_FOR_MS = 10 * 60 * 1000;
   var YT_STATE = { ENDED: 0, PLAYING: 1, PAUSED: 2 };
+  var AVATAR_COLORS = ["#0b63ce", "#8250df", "#bf3989", "#cf222e", "#bc4c00", "#1a7f37", "#0a7ea4", "#6639ba"];
 
   var $ = function (id) { return document.getElementById(id); };
   var els = {
-    main: $("main"), notice: $("notice"), dateChip: $("date-chip"),
-    eyebrow: $("session-eyebrow"), title: $("session-title"), meta: $("session-meta"),
+    main: $("main"), notice: $("notice"), dateChip: $("date-chip"), crumbDay: $("crumb-day"),
+    title: $("session-title"), dayLabel: $("day-label"), meta: $("session-meta"),
     progress: $("progress"), progressBar: $("progress-bar"), progressFill: $("progress-fill"),
-    progressLabel: $("progress-label"),
+    progressLabel: $("progress-label"), progressPct: $("progress-pct"),
+    weekCard: $("week-card"), weekList: $("week-list"), editPlan: $("edit-plan"),
+    avatar: $("post-avatar"), nowChannel: $("now-channel"), nowPos: $("now-position"),
+    nowBadge: $("now-badge"), nowTitle: $("now-title"),
     frame: $("frame"), pause: $("pause-overlay"), nextOverlay: $("next-overlay"),
     nextTitle: $("next-title"), nextPlay: $("next-play"), nextFinish: $("next-finish"),
     blocked: $("blocked-overlay"), blockedOpen: $("blocked-open"), blockedDone: $("blocked-done"),
@@ -31,13 +36,12 @@
     finishPrompt: $("finish-prompt"), finishNext: $("finish-next"), rewatch: $("rewatch"),
     stateOverlay: $("state-overlay"), stateSpinner: $("state-spinner"),
     stateTitle: $("state-title"), stateText: $("state-text"),
-    info: $("player-info"), nowPos: $("now-position"), nowTitle: $("now-title"), nowChannel: $("now-channel"),
-    prev: $("prev"), next: $("next"), mark: $("mark"), markLabel: $("mark-label"),
+    info: $("player-info"), prev: $("prev"), next: $("next"), mark: $("mark"), markLabel: $("mark-label"),
     queue: $("queue"), queueList: $("queue-list"), queueCount: $("queue-count"),
     reflect: $("reflect"), reflectText: $("reflect-text"), themeToggle: $("theme-toggle")
   };
 
-  var session = null;      // { date, weekday, theme, prompt, send_time, videos: [...] }
+  var session = null;      // { date, weekday, theme, prompt, send_time, week, videos: [...] }
   var current = 0;
   var watched = new Set();
   var player = null;
@@ -57,11 +61,11 @@
     return el;
   }
 
-  function svgIcon(path) {
+  function svgIcon(path, cls) {
     var ns = "http://www.w3.org/2000/svg";
     var svg = document.createElementNS(ns, "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
-    svg.setAttribute("class", "icon");
+    svg.setAttribute("class", cls || "icon");
     svg.setAttribute("aria-hidden", "true");
     var p = document.createElementNS(ns, "path");
     p.setAttribute("d", path);
@@ -71,6 +75,8 @@
   var ICON_CHECK = "M5 12.5l4.5 4.5L19 7.5";
   var ICON_CLOCK = "M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z";
   var ICON_PLAY = "M10 8.5v7l5.5-3.5z M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z";
+  var ICON_CAL = "M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z";
+  var ICON_MOON = "M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z";
 
   function fmtMinutes(m) {
     m = Math.round(m || 0);
@@ -90,7 +96,24 @@
     if (p.length !== 3) return iso || "";
     return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString(undefined, opts || { weekday: "long", month: "short", day: "numeric" });
   }
+  function weekdayOf(iso) {
+    var p = (iso || "").split("-");
+    if (p.length !== 3) return "";
+    return DAYS[(new Date(+p[0], +p[1] - 1, +p[2]).getDay() + 6) % 7];
+  }
+  function titleCase(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ""; }
   function cap(s, n) { s = String(s == null ? "" : s); return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+
+  function initials(name) {
+    var words = String(name || "").replace(/[^\p{L}\p{N} ]/gu, " ").trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return "▶";
+    return (words[0][0] + (words.length > 1 ? words[words.length - 1][0] : "")).toUpperCase();
+  }
+  function colorFor(name) {
+    var hsh = 0, s = String(name || "");
+    for (var i = 0; i < s.length; i++) hsh = (hsh * 31 + s.charCodeAt(i)) >>> 0;
+    return AVATAR_COLORS[hsh % AVATAR_COLORS.length];
+  }
 
   var store = {
     get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -105,9 +128,8 @@
 
   function sanitize(raw) {
     if (!raw || typeof raw !== "object") return null;
-    var vids = Array.isArray(raw.videos) ? raw.videos : [];
     var clean = [];
-    vids.forEach(function (v) {
+    (Array.isArray(raw.videos) ? raw.videos : []).forEach(function (v) {
       if (!v || !ID_RE.test(v.id) || clean.length >= MAX_VIDEOS) return;
       clean.push({
         id: v.id,
@@ -119,12 +141,17 @@
         published: typeof v.published === "string" ? v.published.slice(0, 10) : ""
       });
     });
+    var week = [];
+    (Array.isArray(raw.week) ? raw.week : []).forEach(function (d) {
+      if (d && DAYS.indexOf(d.day) !== -1 && week.length < 7) week.push({ day: d.day, theme: cap(d.theme || "", 120), rest: !!d.rest });
+    });
     return {
       date: /^\d{4}-\d{2}-\d{2}$/.test(raw.date || "") ? raw.date : "",
-      weekday: cap(raw.weekday || "", 20),
+      weekday: DAYS.indexOf(raw.weekday) !== -1 ? raw.weekday : "",
       theme: cap(raw.theme || "", 120),
       prompt: cap(raw.prompt || "", 300),
-      send_time: cap(raw.send_time || "", 20),
+      send_time: /^\d{2}:\d{2}$/.test(raw.send_time || "") ? raw.send_time : "",
+      week: week,
       videos: clean
     };
   }
@@ -135,7 +162,7 @@
     var ids = (q.get("v") || "").split(",").filter(function (x) { return ID_RE.test(x); }).slice(0, MAX_VIDEOS);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !ids.length) return null;
     return {
-      date: d, weekday: "", theme: "", prompt: "", send_time: "",
+      date: d, weekday: weekdayOf(d), theme: "", prompt: "", send_time: "", week: [],
       videos: ids.map(function (id, i) {
         return { id: id, title: "Video " + (i + 1), channel: "", minutes: 0, embeddable: true, older: false, published: "", placeholder: true };
       })
@@ -158,35 +185,66 @@
     els.stateText.textContent = text || "";
   }
 
+  function metaItem(icon, text) {
+    return h("span", { class: "meta-item" }, svgIcon(icon), document.createTextNode(text));
+  }
+
   function renderHeader() {
     var v = session.videos;
     var total = v.reduce(function (s, x) { return s + x.minutes; }, 0);
-    els.eyebrow.textContent = prettyDate(session.date, { weekday: "long", month: "long", day: "numeric" });
+    var day = session.weekday || weekdayOf(session.date);
     els.title.textContent = session.theme || "Today's session";
     document.title = (session.theme ? session.theme + " · " : "") + "Daily Watch";
+    els.crumbDay.textContent = titleCase(day) || "Today";
+    var isToday = session.date === localToday();
+    els.dayLabel.textContent = isToday ? "Today" : (session.date < localToday() ? "Past session" : titleCase(day));
+    els.dayLabel.hidden = !session.date;
     els.dateChip.textContent = prettyDate(session.date, { month: "short", day: "numeric" });
-    els.dateChip.hidden = false;
+    els.dateChip.hidden = !session.date;
 
     els.meta.textContent = "";
-    els.meta.appendChild(h("span", { class: "meta-item" }, svgIcon(ICON_PLAY),
-      document.createTextNode(v.length + (v.length === 1 ? " video" : " videos"))));
-    if (total) els.meta.appendChild(h("span", { class: "meta-item" }, svgIcon(ICON_CLOCK),
-      document.createTextNode(fmtMinutes(total) + " total")));
+    if (session.date) els.meta.appendChild(metaItem(ICON_CAL, prettyDate(session.date, { weekday: "long", month: "long", day: "numeric" })));
+    els.meta.appendChild(metaItem(ICON_PLAY, v.length + (v.length === 1 ? " video" : " videos")));
+    if (total) els.meta.appendChild(metaItem(ICON_CLOCK, fmtMinutes(total) + " total"));
 
     if (session.prompt) { els.reflectText.textContent = session.prompt; els.reflect.hidden = false; }
+    renderWeek();
+  }
+
+  function renderWeek() {
+    if (!session.week || !session.week.length) { els.weekCard.hidden = true; return; }
+    var today = session.weekday || weekdayOf(session.date);
+    els.weekList.textContent = "";
+    session.week.forEach(function (d) {
+      var li = h("li", { class: "week__item" + (d.rest ? " week__item--rest" : "") },
+        h("span", { class: "week__day", text: d.day.slice(0, 3) }),
+        h("span", { class: "week__theme", text: d.rest ? "Rest day" : (d.theme || "—"), title: d.rest ? "Rest day" : d.theme }));
+      if (d.day === today) li.setAttribute("aria-current", "date");
+      els.weekList.appendChild(li);
+    });
+    // "Edit your plan" → config.yaml in the repo, when hosted on GitHub Pages
+    var m = location.hostname.match(/^([A-Za-z0-9-]+)\.github\.io$/);
+    var repo = location.pathname.split("/").filter(Boolean)[0];
+    if (m && repo && /^[A-Za-z0-9._-]+$/.test(repo)) {
+      els.editPlan.href = "https://github.com/" + m[1] + "/" + repo + "/blob/main/config.yaml";
+      els.editPlan.hidden = false;
+    }
+    els.weekCard.hidden = false;
   }
 
   function renderProgress() {
-    var v = session.videos, done = v.filter(function (x) { return watched.has(x.id); });
+    var v = session.videos, done = v.filter(function (x) { return watched.has(x.id); }).length;
     var left = v.filter(function (x) { return !watched.has(x.id); }).reduce(function (s, x) { return s + x.minutes; }, 0);
+    var pct = v.length ? Math.round((done / v.length) * 100) : 0;
     els.progress.hidden = false;
     els.progressBar.setAttribute("aria-valuemax", String(v.length));
-    els.progressBar.setAttribute("aria-valuenow", String(done.length));
-    els.progressFill.style.width = (v.length ? (done.length / v.length) * 100 : 0) + "%";
-    els.progressLabel.textContent = done.length === v.length
-      ? "All " + v.length + " watched. You're done for today."
-      : done.length + " of " + v.length + " watched" + (left ? " · about " + fmtMinutes(left) + " left" : "");
-    els.queueCount.textContent = done.length + "/" + v.length;
+    els.progressBar.setAttribute("aria-valuenow", String(done));
+    els.progressFill.style.width = pct + "%";
+    els.progressPct.textContent = pct + "% complete";
+    els.progressLabel.textContent = done === v.length
+      ? "All " + v.length + " watched"
+      : done + " of " + v.length + " watched" + (left ? " · " + fmtMinutes(left) + " left" : "");
+    els.queueCount.textContent = done + "/" + v.length;
   }
 
   function renderQueue() {
@@ -196,20 +254,22 @@
       var thumb = h("span", { class: "thumb" },
         h("img", { src: "https://i.ytimg.com/vi/" + v.id + "/mqdefault.jpg", alt: "", loading: "lazy", width: "320", height: "180" }));
       if (v.minutes) thumb.appendChild(h("span", { class: "thumb__time", text: fmtClock(v.minutes) }));
-      if (isDone) thumb.appendChild(h("span", { class: "thumb__state" }, svgIcon(ICON_CHECK)));
-      if (isNow) thumb.appendChild(h("span", { class: "thumb__now", text: "NOW" }));
 
-      var badge = isDone ? h("span", { class: "queue__badge queue__badge--done", text: "Watched" })
-        : !v.embeddable ? h("span", { class: "queue__badge", text: "Opens on YouTube" })
-        : v.older && v.published ? h("span", { class: "queue__badge", text: "From " + prettyDate(v.published, { month: "short", year: "numeric" }) })
-        : null;
+      var tags = h("span", { class: "queue__tags" });
+      if (isNow) tags.appendChild(h("span", { class: "label label--accent", text: "Now playing" }));
+      if (v.older && v.published) tags.appendChild(h("span", { class: "label", text: "From " + prettyDate(v.published, { month: "short", year: "numeric" }) }));
+      if (!v.embeddable) tags.appendChild(h("span", { class: "label", text: "Opens on YouTube" }));
+
       var text = h("span", { class: "queue__text" },
         h("span", { class: "queue__name", text: v.title }),
         v.channel ? h("span", { class: "queue__sub", text: v.channel }) : null,
-        badge);
+        tags.childNodes.length ? tags : null);
+
+      var status = isDone ? h("span", { class: "status status--done", title: "Watched" }, svgIcon(ICON_CHECK))
+        : h("span", { class: "status" + (isNow ? " status--now" : ""), title: isNow ? "Now playing" : "Not watched yet" });
 
       var btn = h("button", { class: "queue__btn", type: "button",
-        "aria-label": (i + 1) + ". " + v.title + (isDone ? " (watched)" : "") }, thumb, text);
+        "aria-label": (i + 1) + ". " + v.title + (isDone ? " (watched)" : "") }, thumb, text, status);
       btn.addEventListener("click", function () { select(i, true); });
       var li = h("li", { class: "queue__item" + (isDone ? " queue__item--done" : "") }, btn);
       if (isNow) li.setAttribute("aria-current", "true");
@@ -220,14 +280,18 @@
 
   function renderNow() {
     var v = session.videos[current];
-    els.info.hidden = false;
+    var name = v.channel || "Video " + (current + 1);
+    els.avatar.className = "avatar";
+    els.avatar.textContent = initials(v.channel);
+    els.avatar.style.background = colorFor(v.channel || v.id);
+    els.nowChannel.textContent = name;
     els.nowPos.textContent = "Video " + (current + 1) + " of " + session.videos.length + (v.minutes ? " · " + fmtMinutes(v.minutes) : "");
-    els.nowTitle.textContent = v.title;
-    els.nowChannel.textContent = "";
-    if (v.channel) els.nowChannel.appendChild(h("span", { text: v.channel }));
-    if (v.older && v.published) els.nowChannel.appendChild(h("span", { class: "queue__badge",
-      text: "From " + prettyDate(v.published, { month: "short", year: "numeric" }) }));
+    els.nowTitle.textContent = v.placeholder ? "" : v.title;
     var isDone = watched.has(v.id);
+    if (isDone) { els.nowBadge.textContent = "Watched"; els.nowBadge.className = "label label--success"; }
+    else if (v.older && v.published) { els.nowBadge.textContent = "From " + prettyDate(v.published, { month: "short", year: "numeric" }); els.nowBadge.className = "label"; }
+    els.nowBadge.hidden = !(isDone || (v.older && v.published));
+    els.info.hidden = false;
     els.mark.setAttribute("aria-pressed", String(isDone));
     els.markLabel.textContent = isDone ? "Watched" : "Mark watched";
     els.prev.disabled = current === 0;
@@ -343,8 +407,9 @@
     if (!v.embeddable) showBlocked(v, false);
     else if (player && playerReady) { play ? player.loadVideoById(v.id) : player.cueVideoById(v.id); }
     else if (play) pendingId = v.id;
+    els.reflect.hidden = !session.prompt;
     renderAll();
-    if (play && window.matchMedia("(max-width: 1023px)").matches) els.frame.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (play && window.matchMedia("(max-width: 899px)").matches) $("post").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function markWatched(id, value) {
@@ -360,14 +425,22 @@
     var mins = done.reduce(function (s, x) { return s + x.minutes; }, 0);
     els.finishSummary.textContent = done.length
       ? "You watched " + done.length + " of " + v.length + (mins ? " · " + fmtMinutes(mins) : "") + ". Nothing else to see here."
-      : "No videos watched this time — that's fine. Nothing else to see here.";
+      : "No videos watched this time, and that's fine. Nothing else to see here.";
     els.finishPrompt.hidden = !session.prompt;
-    els.finishPrompt.textContent = session.prompt ? "💭 " + session.prompt : "";
+    els.finishPrompt.textContent = session.prompt || "";
     els.finishNext.textContent = "Tomorrow's session arrives " + (session.send_time ? "around " + session.send_time : "tomorrow") + ". You can close this tab.";
     els.info.hidden = true;
+    els.nowTitle.textContent = "";
+    els.avatar.className = "avatar";
+    els.avatar.style.background = "var(--success-emph)";
+    els.avatar.textContent = "✓";
+    els.nowChannel.textContent = "Session complete";
+    els.nowPos.textContent = prettyDate(session.date);
+    els.nowBadge.hidden = true;
     els.reflect.hidden = true;
     els.finish.hidden = false;
     els.frame.classList.add("is-finished");
+    els.frame.style.backgroundImage = "none";
     renderProgress(); renderQueue();
     els.finishTitle.focus({ preventScroll: true });
   }
@@ -380,7 +453,7 @@
     markWatched(session.videos[current].id, true);
     afterVideo();
   });
-  els.rewatch.addEventListener("click", function () { els.reflect.hidden = !session.prompt; select(current, false); });
+  els.rewatch.addEventListener("click", function () { select(current, false); });
   els.prev.addEventListener("click", function () { select(current - 1, true); });
   els.next.addEventListener("click", function () { select(current + 1, true); });
   els.mark.addEventListener("click", function () {
@@ -395,7 +468,7 @@
     var k = e.key.toLowerCase();
     if (k === "n") select(current + 1, true);
     else if (k === "p") select(current - 1, true);
-    else if (k === "m") els.mark.click();
+    else if (k === "m" && els.finish.hidden) els.mark.click();
   });
 
   els.themeToggle.addEventListener("click", function () {
@@ -422,21 +495,25 @@
     if (watched.size && nextUnwatched(-1) === -1 && !(fromHash >= 0)) showFinish();
     else if (!s.videos[current].embeddable) showBlocked(s.videos[current], false);
     loadYouTubeApi();
-    var today = localToday();
-    if (s.date && s.date < today) notice("This is the session from " + prettyDate(s.date) + ". Today's arrives " + (s.send_time ? "around " + s.send_time : "later today") + ".");
+    if (s.date && s.date < localToday()) notice("This is the session from " + prettyDate(s.date) + ". Today's arrives " + (s.send_time ? "around " + s.send_time : "later today") + ".");
   }
 
   function emptyState(s) {
     els.main.setAttribute("aria-busy", "false");
-    els.eyebrow.textContent = s && s.date ? prettyDate(s.date, { weekday: "long", month: "long", day: "numeric" }) : "Daily Watch";
+    session = s && s.date ? s : { date: "", weekday: "", theme: "", prompt: "", week: (s && s.week) || [], videos: [] };
     els.title.textContent = s && s.theme ? s.theme : "No session today";
+    els.crumbDay.textContent = s && s.weekday ? titleCase(s.weekday) : "Today";
     els.meta.textContent = "";
+    els.avatar.className = "avatar";
+    els.avatar.style.background = "var(--accent)";
+    els.avatar.textContent = "☾";
+    els.nowChannel.textContent = "Daily Watch";
+    els.nowPos.textContent = "Nothing scheduled";
+    renderWeek();
     showState(s && s.theme ? "Nothing new on this theme today" : "No session right now",
       "Enjoy the time back. The next session arrives with your next daily message.", false);
     els.frame.classList.add("is-empty");
-    var icon = svgIcon("M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z");
-    icon.setAttribute("class", "icon state__icon");
-    els.stateOverlay.firstElementChild.insertBefore(icon, els.stateTitle);
+    els.stateOverlay.firstElementChild.insertBefore(svgIcon(ICON_MOON, "icon state__icon"), els.stateTitle);
   }
 
   function hydrateLater(urlSession) {
@@ -452,8 +529,7 @@
               var m = byId[v.id];
               if (m) { Object.assign(v, m); v.placeholder = false; }
             });
-            urlSession.theme = d.theme; urlSession.prompt = d.prompt; urlSession.send_time = d.send_time;
-            urlSession.weekday = d.weekday;
+            ["theme", "prompt", "send_time", "weekday", "week"].forEach(function (k) { urlSession[k] = d[k]; });
             notice("");
             renderHeader(); renderAll();
           } else retry();
@@ -466,7 +542,8 @@
     var url = fromUrl();
     if (url && (!data || data.date !== url.date)) {
       // Link is newer than the deployed today.json (GitHub Pages lags a minute or two).
-      notice("Today's details are still publishing — titles fill in shortly. You can start watching now.");
+      notice("Today's details are still publishing. Titles fill in shortly, and you can start watching now.");
+      if (data && data.week && data.week.length) url.week = data.week;
       start(url);
       hydrateLater(url);
     } else if (data && data.videos.length) {
