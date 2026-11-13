@@ -1,29 +1,10 @@
 {
-  "date": "2026-11-11",
-  "weekday": "wednesday",
-  "theme": "Relationship, Communication and Marriage",
+  "date": "2026-11-13",
+  "weekday": "friday",
+  "theme": "Men's Conference and Fatherhood",
   "prompt": "Before you close this: write down one idea you'll use this week.",
+  "task": "Write one sentence about the man and father you're becoming, and one action toward it this week.",
   "send_time": "12:00",
-  "videos": [
-    {
-      "id": "6uxeuy6jBvs",
-      "title": "Loving Others - Pst. Dolapo Lawal",
-      "channel": "Pastor Dolapo Lawal",
-      "minutes": 0,
-      "embeddable": true,
-      "older": false,
-      "published": ""
-    },
-    {
-      "id": "jBz-UbHEhMs",
-      "title": "HOW I GOT MARRIED AT 19 IN 200 LEVEL",
-      "channel": "Femi Lazarus",
-      "minutes": 0,
-      "embeddable": true,
-      "older": false,
-      "published": ""
-    }
-  ],
   "week": [
     {
       "day": "monday",
@@ -59,6 +40,58 @@
       "day": "sunday",
       "theme": "Sermons",
       "rest": false
+    }
+  ],
+  "videos": [
+    {
+      "id": "Rp5UXvzsoaM",
+      "title": "Understanding The Power of Fatherhood | Dr. Myles Munroe | MunroeGlobal.com",
+      "channel": "Munroe Global",
+      "minutes": 84.83,
+      "embeddable": true,
+      "older": true,
+      "published": "2026-06-07",
+      "note": ""
+    },
+    {
+      "id": "Q6PcI6JIUxI",
+      "title": "WHAT DO WE DO WITH MEN'S VULNERABILITY?",
+      "channel": "Femi Lazarus",
+      "minutes": 161.67,
+      "embeddable": true,
+      "older": true,
+      "published": "2026-06-17",
+      "note": ""
+    },
+    {
+      "id": "lYEdva76pok",
+      "title": "The Power and Purpose of The Family | Dr. Myles Munroe | MunroeGlobal.com",
+      "channel": "Munroe Global",
+      "minutes": 37.17,
+      "embeddable": true,
+      "older": true,
+      "published": "2026-02-01",
+      "note": ""
+    },
+    {
+      "id": "zTSwR8e8Vi0",
+      "title": "MANY SUCCESSFUL MEN ARE BROKEN. THESE ARE ISSUES OFTEN LEFT UNDISCUSSED . #declassified #podcast",
+      "channel": "Femi Lazarus",
+      "minutes": 76.17,
+      "embeddable": true,
+      "older": true,
+      "published": "2026-02-18",
+      "note": ""
+    },
+    {
+      "id": "k1LZgkpZFI8",
+      "title": "10 Qualities of A Kingdom Father | Dr. Myles Munroe | MunroeGlobal.com",
+      "channel": "Munroe Global",
+      "minutes": 75.43,
+      "embeddable": true,
+      "older": true,
+      "published": "2025-06-01",
+      "note": ""
     }
   ]
 }
