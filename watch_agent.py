@@ -38,6 +38,7 @@ ROOT = Path(__file__).parent
 CONFIG_PATH = ROOT / "config.yaml"
 SENT_PATH = ROOT / "sent.json"
 LAST_PATH = ROOT / "last_sent.txt"
+PAGE_DATA_PATH = ROOT / "docs" / "today.json"
 YT = "https://www.googleapis.com/youtube/v3"
 WEEKDAYS = g.WEEKDAYS
 QUOTA = g.Quota()
@@ -375,8 +376,11 @@ def pick_videos(day_cfg, cfg, api_key, sent):
 
 # ── messages ─────────────────────────────────────────────────────────────────
 
-def video_url(v, cfg=None):
-    """Distraction-free mode links to the bare player: no feed, no comments, no autoplay rabbit hole."""
+def video_url(v, cfg=None, index=None):
+    """Watch page (when live) > bare player (distraction_free) > normal YouTube link."""
+    page = (cfg or {}).get("_page")
+    if page:
+        return f"{page}#{index}" if index else page
     if (cfg or {}).get("distraction_free") and v.get("embeddable", True):
         return f"https://www.youtube-nocookie.com/embed/{v['id']}?rel=0"
     return f"https://youtu.be/{v['id']}"
@@ -411,10 +415,13 @@ def build_message(theme, weekday, videos, cfg=None, day_cfg=None):
     lines = [f"🎯 <b>{e(weekday.title())} — {e(theme)}</b>"]
     if not videos:
         return "\n".join(lines + ["", EMPTY])
-    lines += [summary_line(videos), ""]
+    lines.append(summary_line(videos))
+    if (cfg or {}).get("_page"):
+        lines.append(f'▶️ <a href="{e(cfg["_page"])}"><b>Start today\'s session</b></a>')
+    lines.append("")
     for i, v in enumerate(videos, 1):
         length = f" · {video_meta(v)}" if video_meta(v) else ""
-        lines.append(f'{i}. <a href="{e(video_url(v, cfg))}">{e(v["title"])}</a>{e(length)}')
+        lines.append(f'{i}. <a href="{e(video_url(v, cfg, i))}">{e(v["title"])}</a>{e(length)}')
         lines.append(f"   <i>{e(v['channel'])}</i>")
     prompt = day_prompt(day_cfg, cfg)
     if prompt:
@@ -427,11 +434,14 @@ def build_plain(theme, weekday, videos, cfg=None, day_cfg=None):
     lines = [f"🎯 {weekday.title()} — {theme}"]
     if not videos:
         return "\n".join(lines + ["", EMPTY])
-    lines += [summary_line(videos), ""]
+    lines.append(summary_line(videos))
+    if (cfg or {}).get("_page"):
+        lines.append(f"▶ Start today's session: {cfg['_page']}")
+    lines.append("")
     for i, v in enumerate(videos, 1):
         length = f" ({video_meta(v)})" if video_meta(v) else ""
         lines.append(f"{i}. {v['title']}{length}")
-        lines.append(f"   {v['channel']} — {video_url(v, cfg)}")
+        lines.append(f"   {v['channel']} — {video_url(v, cfg, i)}")
     prompt = day_prompt(day_cfg, cfg)
     if prompt:
         lines += ["", f"💭 {prompt}"]
@@ -442,22 +452,84 @@ def build_html(theme, weekday, videos, cfg=None, day_cfg=None):
     """Email (HTML) version."""
     e = html.escape
     rows = "".join(
-        f'<li style="margin:0 0 14px"><a href="{e(video_url(v, cfg))}" '
+        f'<li style="margin:0 0 14px"><a href="{e(video_url(v, cfg, i))}" '
         f'style="font-size:16px;color:#1a5fb4;text-decoration:none">{e(v["title"])}</a>'
         f'<br><span style="color:#666;font-size:13px">{e(v["channel"])}'
         f'{" · " + e(video_meta(v)) if video_meta(v) else ""}</span></li>'
-        for v in videos
+        for i, v in enumerate(videos, 1)
     ) or f'<li>{EMPTY}</li>'
     sub = summary_line(videos) if videos else "Your picks for today."
+    page = (cfg or {}).get("_page")
+    cta = (f'<p style="margin:0 0 22px"><a href="{e(page)}" style="display:inline-block;background:#4f46e5;'
+           f'color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:11px 20px;'
+           f'border-radius:999px">▶ Start today\'s session</a></p>') if page and videos else ""
     prompt = day_prompt(day_cfg, cfg)
     prompt_html = (f'<p style="margin:20px 0 0;padding:12px 14px;background:#f4f6fa;border-radius:8px">'
                    f'💭 {e(prompt)}</p>') if prompt and videos else ""
     return (f'<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:560px;'
             f'margin:0 auto;padding:24px;color:#222">'
             f'<h2 style="margin:0 0 4px">🎯 {e(weekday.title())} — {e(theme)}</h2>'
-            f'<p style="margin:0 0 20px;color:#666">{e(sub)}</p>'
+            f'<p style="margin:0 0 20px;color:#666">{e(sub)}</p>{cta}'
             f'<ol style="padding-left:20px">{rows}</ol>{prompt_html}'
             f'<p style="margin-top:28px;font-size:12px;color:#999">Sent by Daily Watch Agent</p></div>')
+
+
+# ── watch page (GitHub Pages) ────────────────────────────────────────────────
+
+def page_base(cfg):
+    """Where the watch page lives: WATCH_PAGE_URL / watch_page_url, else derived from the GitHub repo."""
+    if not cfg.get("watch_page", True):
+        return None
+    url = os.environ.get("WATCH_PAGE_URL") or cfg.get("watch_page_url")
+    if not url:
+        repo = os.environ.get("GITHUB_REPOSITORY", "")
+        if repo.count("/") != 1:
+            return None
+        owner, name = repo.split("/")
+        url = f"https://{owner.lower()}.github.io/{name}/"
+    url = url.strip()
+    if not url.endswith("/"):
+        url += "/"
+    return url if g.safe_page_url(url) else None
+
+
+def page_is_live(url):
+    """Only link to the page if it's actually published (Pages may not be switched on yet)."""
+    try:
+        r = requests.get(url, timeout=10)
+        return r.ok and "Daily Watch" in r.text
+    except requests.RequestException:
+        return False
+
+
+def session_link(base, day, videos):
+    """The link carries the date + IDs so it works before the new today.json has deployed."""
+    return f"{base}?d={day}&v={','.join(v['id'] for v in videos)}"
+
+
+def page_data(day, weekday, day_cfg, cfg, videos):
+    hour = os.environ.get("SEND_HOUR", "")
+    return {
+        "date": day,
+        "weekday": weekday,
+        "theme": day_cfg["theme"],
+        "prompt": day_prompt(day_cfg, cfg),
+        "send_time": f"{int(hour):02d}:00" if hour.isdigit() and int(hour) < 24 else "",
+        "videos": [{
+            "id": v["id"],
+            "title": v["title"],
+            "channel": v["channel"],
+            "minutes": round(v.get("minutes", 0), 2),
+            "embeddable": v.get("embeddable", True),
+            "older": bool(v.get("older")),
+            "published": v["published"].date().isoformat() if v.get("published") else "",
+        } for v in videos],
+    }
+
+
+def write_page_data(data):
+    PAGE_DATA_PATH.parent.mkdir(exist_ok=True)
+    g.atomic_write(PAGE_DATA_PATH, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
 
 
 # ── delivery ─────────────────────────────────────────────────────────────────
@@ -689,9 +761,17 @@ def run():
         print("\n" + build_plain(day_cfg["theme"], weekday, videos, cfg, day_cfg))
         return
 
+    base = page_base(cfg) if videos else None
+    if base and page_is_live(base):
+        cfg["_page"] = session_link(base, today, videos)
+    elif base:
+        print(f"  watch page not live at {base} — linking straight to YouTube (see README: Watch page)")
+
     delivered = deliver(cfg, day_cfg, weekday, videos)
     if not delivered:
         sys.exit("Nothing was delivered — run `python watch_agent.py --check` to see what's missing.")
+    if base:
+        write_page_data(page_data(today, weekday, day_cfg, cfg, videos))
     sent.update(v["id"] for v in videos)
     save_sent(sent)
     g.atomic_write(LAST_PATH, today + "\n")

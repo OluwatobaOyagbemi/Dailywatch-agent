@@ -41,6 +41,21 @@ My first instinct was to build an app with calendar sync and push notifications.
 <!-- Replace this comment with a screenshot of the Telegram message:
 ![Telegram message](docs/screenshot.png) -->
 
+## Watch page
+
+Each day's message links to your own watch page on GitHub Pages instead of YouTube. It has today's list and nothing else.
+
+- **A list that ends:** today's videos with thumbnails, lengths and progress, then *"End of today's list. Nothing more to scroll."*
+- **No YouTube rabbit holes:** videos play in a privacy-enhanced player. When one ends, the page shows its own *Up next* card in place of YouTube's grid of suggestions. When you pause, a resume screen covers YouTube's "More videos" strip, and the control bar stays usable.
+- **No autoplay:** you choose when the next video starts.
+- **A finish line:** once you've watched everything (or tap *Finish for today*), the page shows *"That's today."*, your reflection prompt and when tomorrow's session arrives. No other links.
+- **Built to feel familiar and work everywhere:** works on phone and desktop, follows your light or dark setting, keyboard shortcuts (`N` next, `P` previous, `M` mark watched), and screen-reader labels. Progress is remembered on that device.
+- **Edge cases handled:** if a creator blocks playback outside YouTube, the page says so and offers a single labelled "Open on YouTube" button. If you tap the link before GitHub has published the day's data, you can start watching straight away and titles fill in when it arrives.
+
+**Turn it on (once):** in your repo, *Settings → Pages → Build and deployment → Deploy from a branch → `main` / `/docs` → Save*. Your page is at `https://<your-username>.github.io/<repo-name>/`. Until it's live, messages link straight to YouTube, so leaving `watch_page: true` is safe. To use another address, set a `WATCH_PAGE_URL` repo variable.
+
+Your daily list is published at that address, as public as the repo itself.
+
 ## How it works
 
 1. `config.yaml` holds your weekly plan: one theme per weekday and the creators you follow.
@@ -55,7 +70,7 @@ Everything runs on free tiers. The script uses a few hundred YouTube API units a
 1. **Fork** this repo (keep it public so Actions stays free).
 2. **Start fresh.** Copy `config.example.yaml` over `config.yaml`, then clear the previous owner's history:
    ```bash
-   cp config.example.yaml config.yaml && echo "[]" > sent.json && rm -f last_sent.txt
+   cp config.example.yaml config.yaml && echo "[]" > sent.json && rm -f last_sent.txt && printf '{"date":"","videos":[]}\n' > docs/today.json
    ```
    Edit `config.yaml`: your themes, your creators. A creator handle is the part after `@` in the channel URL (`youtube.com/@TED` → `TED`).
 3. **YouTube API key:** [console.cloud.google.com](https://console.cloud.google.com) → create or pick a project → *APIs & Services → Library* → enable **YouTube Data API v3** → *Credentials → Create credentials → API key*. No billing needed.
@@ -70,7 +85,8 @@ Everything runs on free tiers. The script uses a few hundred YouTube API units a
 5. In your fork: *Settings → Secrets and variables → Actions*:
    - **Secrets** tab: add `YOUTUBE_API_KEY` plus the secrets for your delivery choice.
    - **Variables** tab: add `TIMEZONE` (e.g. `Europe/London`, `Africa/Lagos`, `America/Los_Angeles`; [list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)) and `SEND_HOUR` (`0`–`23`, local). Defaults: `America/New_York`, `12`.
-6. *Actions* tab → enable workflows on your fork → *Daily Watch → Run workflow.* Check your phone or inbox.
+6. *Settings → Pages* → deploy from branch `main`, folder `/docs` (this turns on the [watch page](#watch-page)).
+7. *Actions* tab → enable workflows on your fork → *Daily Watch → Run workflow.* Check your phone or inbox.
 
 **About timing:** GitHub often starts scheduled jobs late (sometimes hours late), so the job checks every hour and sends on the first run at or after `SEND_HOUR`. If you want it on the minute, point a free scheduler such as [cron-job.org](https://cron-job.org) at the [workflow dispatch API](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event). Duplicate triggers are safe because a day is never sent twice.
 
@@ -113,6 +129,8 @@ Offline tests use a fake YouTube API, so no key or network is needed. They cover
 | `prompt` | reflection line at the end of each message (a day's `prompt:` overrides it) |
 | `blocked_words` | never send titles containing these words (`#shorts` is always blocked) |
 | `max_api_units` | hard cap on YouTube API units per run (default `5000` of the free 10,000/day) |
+| `watch_page` | `true` = messages link to your watch page once it's published (see *Watch page*) |
+| `watch_page_url` | optional custom address for the watch page (default `https://<owner>.github.io/<repo>/`) |
 | `deliver` | `[telegram]`, `[email]`, or `[telegram, email]`. If one channel fails, the others still send |
 
 ## Guardrails

@@ -75,6 +75,9 @@ TOP_LEVEL = {
                              (isinstance(v, list) and bool(v) and all(isinstance(c, str) for c in v)
                               and set(v) <= CHANNELS),
                              "telegram, email, or [telegram, email]"),
+    "watch_page":           (lambda v: isinstance(v, bool), "true or false"),
+    "watch_page_url":       (lambda v: isinstance(v, str) and safe_page_url(v if v.endswith("/") else v + "/"),
+                             "an https:// address, e.g. https://you.github.io/Dailywatch-agent/"),
     "days":                 (lambda v: isinstance(v, dict) and v, "a map of weekdays (monday: …)"),
 }
 DAY_KEYS = {"theme", "keywords", "creators", "search", "prompt"}
@@ -179,6 +182,14 @@ def validate_env(channels):
 def safe_video_id(vid):
     """Only IDs made of YouTube's URL-safe alphabet get through, so links can't be steered elsewhere."""
     return isinstance(vid, str) and bool(VIDEO_ID_RE.match(vid))
+
+
+PAGE_URL_RE = re.compile(r"^https://[A-Za-z0-9.-]{1,253}(:\d{2,5})?(/[A-Za-z0-9._~%-]*)*/$")
+
+
+def safe_page_url(url):
+    """The watch page link must be a plain https URL (no query, fragment, quotes or spaces)."""
+    return isinstance(url, str) and len(url) <= 300 and bool(PAGE_URL_RE.match(url))
 
 
 def clean_text(s, limit):

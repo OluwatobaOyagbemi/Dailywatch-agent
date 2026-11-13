@@ -50,6 +50,13 @@ blocked_words: []
 # A normal day uses a few hundred; --preview of a whole week uses more.
 max_api_units: 5000
 
+# ── Watch page ───────────────────────────────────────────────
+# Messages link to your own watch page (GitHub Pages, see README) instead of
+# YouTube: today's list only, our own pause and end screens instead of
+# YouTube's suggestions, and a "That's today" finish line. Until the page is
+# published, links go straight to YouTube, so it's safe to leave on.
+watch_page: true
+
 # Where to send. One or both of: telegram, email  (see README for the secrets each needs)
 deliver: [telegram, email]
 
