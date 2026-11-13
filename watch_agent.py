@@ -25,35 +25,73 @@ import json
 import os
 import re
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
 import yaml
 
+import guardrails as g
+
 ROOT = Path(__file__).parent
 CONFIG_PATH = ROOT / "config.yaml"
 SENT_PATH = ROOT / "sent.json"
 LAST_PATH = ROOT / "last_sent.txt"
 YT = "https://www.googleapis.com/youtube/v3"
-WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+WEEKDAYS = g.WEEKDAYS
+QUOTA = g.Quota()
+RETRY_STATUS = {429, 500, 502, 503, 504}
+
+
+class YouTubeError(Exception):
+    pass
+
+
+def warn(msg):
+    """All warnings go through here so secrets are always redacted."""
+    print(g.redact(f"  ! {msg}"), file=sys.stderr)
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
-def load_config():
-    with open(CONFIG_PATH) as f:
-        return yaml.safe_load(f)
+def load_config(validate=True):
+    """Load config.yaml. Raises ConfigError with every problem listed, in plain words."""
+    try:
+        with open(CONFIG_PATH) as f:
+            cfg = yaml.safe_load(f)
+    except FileNotFoundError:
+        raise g.ConfigError([f"{CONFIG_PATH.name} not found — copy config.example.yaml to config.yaml"])
+    except yaml.YAMLError as e:
+        mark = getattr(e, "problem_mark", None)
+        where = f" (line {mark.line + 1}, column {mark.column + 1})" if mark else ""
+        raise g.ConfigError([f"config.yaml isn't valid YAML{where}: check indentation and quotes"])
+    if validate:
+        for w in g.validate_config(cfg):
+            warn(w)
+    if isinstance(cfg, dict) and isinstance(cfg.get("days"), dict):
+        cfg["days"] = {str(k).lower(): v for k, v in cfg["days"].items()}
+    return cfg
 
 
 def load_sent():
-    if SENT_PATH.exists():
-        return set(json.loads(SENT_PATH.read_text() or "[]"))
-    return set()
+    """Sent history. A corrupt file is set aside (never silently overwritten) and the run continues."""
+    if not SENT_PATH.exists():
+        return set()
+    try:
+        data = json.loads(SENT_PATH.read_text() or "[]")
+        if not isinstance(data, list):
+            raise ValueError("not a list")
+        return {x for x in data if isinstance(x, str)}
+    except ValueError as e:
+        backup = SENT_PATH.with_name(SENT_PATH.name + ".corrupt")
+        SENT_PATH.replace(backup)
+        warn(f"{SENT_PATH.name} was unreadable ({e}); moved it to {backup.name} and started fresh")
+        return set()
 
 
 def save_sent(sent):
-    SENT_PATH.write_text(json.dumps(sorted(sent), indent=2))
+    g.atomic_write(SENT_PATH, json.dumps(sorted(sent), indent=2) + "\n")
 
 
 def iso_duration_to_minutes(iso):
@@ -73,20 +111,64 @@ def fmt_minutes(m):
     return f"{m // 60}h {m % 60:02d}m"
 
 
+def _reason(r):
+    try:
+        return r.json()["error"]["errors"][0]["reason"]
+    except (ValueError, KeyError, IndexError, TypeError):
+        return ""
+
+
 def yt_get(endpoint, api_key, **params):
+    """One YouTube API call with a unit cap, retries on transient errors, and no secrets in errors."""
+    try:
+        QUOTA.spend(endpoint)
+    except g.QuotaExceeded as e:
+        raise YouTubeError(str(e))
     params["key"] = api_key
-    r = requests.get(f"{YT}/{endpoint}", params=params, timeout=20)
-    r.raise_for_status()
-    return r.json()
+    for attempt in range(3):
+        try:
+            r = requests.get(f"{YT}/{endpoint}", params=params, timeout=20)
+        except (requests.ConnectionError, requests.Timeout) as e:
+            if attempt == 2:
+                raise YouTubeError(g.redact(f"network error: {e}"))
+            time.sleep(2 ** attempt)
+            continue
+        if r.status_code in RETRY_STATUS and attempt < 2:
+            time.sleep(2 ** attempt)
+            continue
+        reason = _reason(r)
+        if r.status_code == 403 and reason in ("quotaExceeded", "dailyLimitExceeded"):
+            QUOTA.exhausted = True
+            raise YouTubeError("YouTube's daily quota is used up — try again tomorrow")
+        if not r.ok:
+            raise YouTubeError(f"YouTube API error {r.status_code} {reason}".strip())
+        try:
+            data = r.json()
+        except ValueError:
+            raise YouTubeError("YouTube returned a response that isn't JSON")
+        if not isinstance(data, dict):
+            raise YouTubeError("YouTube returned an unexpected response")
+        return data
 
 
 def _video(vid, sn):
-    return {
-        "id": vid,
-        "title": html.unescape(sn["title"]),
-        "channel": html.unescape(sn["channelTitle"]),
-        "published": datetime.fromisoformat(sn["publishedAt"].replace("Z", "+00:00")),
-    }
+    """Build a video dict from API data, or None if anything about it looks wrong."""
+    try:
+        if not g.safe_video_id(vid):
+            return None
+        return {
+            "id": vid,
+            "title": g.clean_text(html.unescape(sn["title"]), g.TITLE_MAX) or "(untitled)",
+            "channel": g.clean_text(html.unescape(sn["channelTitle"]), g.CHANNEL_MAX),
+            "published": datetime.fromisoformat(sn["publishedAt"].replace("Z", "+00:00")),
+        }
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return None
+
+
+def _items(data):
+    items = data.get("items") or []
+    return [it for it in items if isinstance(it, dict)]
 
 
 # ── YouTube lookups ──────────────────────────────────────────────────────────
@@ -100,13 +182,12 @@ def resolve_channel(handle, api_key):
     if handle in _channel_cache:
         return _channel_cache[handle]
     data = yt_get("channels", api_key, part="contentDetails", forHandle=handle)
-    items = data.get("items", [])
-    if not items:
-        print(f"  ! channel @{handle} not found", file=sys.stderr)
-        result = (None, None)
-    else:
-        it = items[0]
+    try:
+        it = _items(data)[0]
         result = (it["id"], it["contentDetails"]["relatedPlaylists"]["uploads"])
+    except (IndexError, KeyError, TypeError):
+        warn(f"channel @{handle} not found")
+        result = (None, None)
     _channel_cache[handle] = result
     return result
 
@@ -119,14 +200,14 @@ def recent_from_channel(handle, api_key, cutoff, limit=10):
             return []
         data = yt_get("playlistItems", api_key, part="snippet",
                       playlistId=playlist, maxResults=limit)
-    except requests.HTTPError as e:
-        print(f"  ! could not read @{handle}: {e.response.status_code} — skipping", file=sys.stderr)
+    except YouTubeError as e:
+        warn(f"could not read @{handle}: {e} — skipping")
         return []
     out = []
-    for it in data.get("items", []):
-        sn = it["snippet"]
-        v = _video(sn["resourceId"]["videoId"], sn)
-        if v["published"] >= cutoff:
+    for it in _items(data):
+        sn = it.get("snippet") or {}
+        v = _video((sn.get("resourceId") or {}).get("videoId"), sn)
+        if v and v["published"] >= cutoff:
             out.append(v)
     return out
 
@@ -137,7 +218,16 @@ def search_videos(query, api_key, cutoff, limit=5):
                   order="relevance", maxResults=limit,
                   publishedAfter=cutoff.strftime("%Y-%m-%dT%H:%M:%SZ"),
                   videoDuration="medium")
-    return [_video(it["id"]["videoId"], it["snippet"]) for it in data.get("items", [])]
+    return _search_results(data)
+
+
+def _search_results(data):
+    out = []
+    for it in _items(data):
+        v = _video((it.get("id") or {}).get("videoId"), it.get("snippet") or {})
+        if v:
+            out.append(v)
+    return out
 
 
 def theme_from_channel(handle, query, api_key, cutoff, limit=8):
@@ -152,10 +242,10 @@ def theme_from_channel(handle, query, api_key, cutoff, limit=8):
         if cutoff is not None:
             params["publishedAfter"] = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
         data = yt_get("search", api_key, **params)
-    except requests.HTTPError as e:
-        print(f"  ! theme search failed for @{handle}: {e.response.status_code} — skipping", file=sys.stderr)
+    except YouTubeError as e:
+        warn(f"theme search failed for @{handle}: {e} — skipping")
         return []
-    return [_video(it["id"]["videoId"], it["snippet"]) for it in data.get("items", [])]
+    return _search_results(data)
 
 
 def add_details(videos, api_key, min_minutes):
@@ -167,11 +257,12 @@ def add_details(videos, api_key, min_minutes):
         ids = ",".join(v["id"] for v in videos[i:i + 50])
         try:
             data = yt_get("videos", api_key, part="contentDetails,status", id=ids)
-        except requests.HTTPError as e:
-            print(f"  ! could not read video details: {e.response.status_code}", file=sys.stderr)
+        except YouTubeError as e:
+            warn(f"could not read video details: {e}")
             continue
-        for it in data.get("items", []):
-            details[it["id"]] = it
+        for it in _items(data):
+            if isinstance(it.get("id"), str):
+                details[it["id"]] = it
     out = []
     for v in videos:
         d = details.get(v["id"])
@@ -180,8 +271,8 @@ def add_details(videos, api_key, min_minutes):
                 continue  # unknown length — can't prove it isn't a Short
             out.append(v)
             continue
-        v["minutes"] = iso_duration_to_minutes(d["contentDetails"].get("duration"))
-        v["embeddable"] = d.get("status", {}).get("embeddable", True)
+        v["minutes"] = iso_duration_to_minutes((d.get("contentDetails") or {}).get("duration"))
+        v["embeddable"] = (d.get("status") or {}).get("embeddable", True) is not False
         if v["minutes"] >= min_minutes:
             out.append(v)
     return out
@@ -216,10 +307,16 @@ def pick_videos(day_cfg, cfg, api_key, sent):
     match_theme = cfg.get("match_theme", True)
     keywords = day_cfg.get("keywords") or day_cfg["theme"]
 
+    blocked = cfg.get("blocked_words") or []
+
     def fresh(videos):
         out = []
         for v in videos:
             if v["id"] in sent or v["id"] in seen:
+                continue
+            if g.is_blocked(v["title"], blocked):
+                print(f"  blocked: {v['title']}")
+                seen.add(v["id"])
                 continue
             seen.add(v["id"])
             out.append(v)
@@ -267,8 +364,8 @@ def pick_videos(day_cfg, cfg, api_key, sent):
         print(f"  searching '{q}'")
         try:
             extra = search_videos(q, api_key, cutoff)
-        except requests.HTTPError as e:
-            print(f"  ! search failed: {e.response.status_code} — skipping", file=sys.stderr)
+        except YouTubeError as e:
+            warn(f"search failed: {e} — skipping")
             continue
         candidates.extend(add_details(fresh(extra), api_key, min_dur))
         pool = select_within_budget(candidates, n, budget)
@@ -366,12 +463,27 @@ def build_html(theme, weekday, videos, cfg=None, day_cfg=None):
 # ── delivery ─────────────────────────────────────────────────────────────────
 
 def send_telegram(text, token, chat_id):
-    r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
-                      json={"chat_id": chat_id, "text": text, "parse_mode": "HTML",
-                            "disable_web_page_preview": True},
-                      timeout=20)
-    if not r.ok:
-        raise RuntimeError(f"Telegram said {r.status_code}: {r.text[:200]}")
+    """Send one message; retries once on rate limits / server errors / network blips."""
+    payload = {"chat_id": chat_id.strip(), "text": text[:g.TELEGRAM_LIMIT], "parse_mode": "HTML",
+               "disable_web_page_preview": True}
+    for attempt in range(2):
+        try:
+            r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload, timeout=20)
+        except (requests.ConnectionError, requests.Timeout) as e:
+            if attempt == 1:
+                raise RuntimeError(g.redact(f"network error: {e}"))
+            time.sleep(3)
+            continue
+        if r.ok:
+            return
+        if r.status_code in RETRY_STATUS and attempt == 0:
+            try:
+                wait = int(r.json().get("parameters", {}).get("retry_after", 3))
+            except (ValueError, AttributeError):
+                wait = 3
+            time.sleep(min(wait, 30))
+            continue
+        raise RuntimeError(g.redact(f"Telegram said {r.status_code}: {r.text[:200]}"))
 
 
 def send_email(subject, html_body, plain_body):
@@ -380,12 +492,19 @@ def send_email(subject, html_body, plain_body):
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     host = os.environ.get("SMTP_HOST") or "smtp.gmail.com"
-    port = int(os.environ.get("SMTP_PORT") or "587")
+    port = os.environ.get("SMTP_PORT") or "587"
+    if not port.isdigit():
+        raise RuntimeError("SMTP_PORT must be a number such as 587")
+    port = int(port)
     user = os.environ["SMTP_USER"]
     password = os.environ["SMTP_PASS"]
-    to = os.environ.get("EMAIL_TO") or user
+    to = (os.environ.get("EMAIL_TO") or user).strip()
+    user = user.strip()
+    for addr in (user, to):
+        if not g.EMAIL_RE.match(addr):
+            raise RuntimeError("SMTP_USER / EMAIL_TO must each be a single email address")
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
+    msg["Subject"] = g.header_safe(subject)
     msg["From"] = user
     msg["To"] = to
     msg.attach(MIMEText(plain_body, "plain"))
@@ -416,15 +535,17 @@ def deliver(cfg, day_cfg, weekday, videos):
     for ch in delivery_channels(cfg):
         missing = missing_secrets(ch)
         if missing is None:
-            print(f"  ! unknown delivery channel '{ch}' (use telegram or email)", file=sys.stderr)
+            warn(f"unknown delivery channel '{ch}' (use telegram or email)")
             continue
         if missing:
-            print(f"  ! {ch}: {', '.join(missing)} not set — skipping", file=sys.stderr)
+            warn(f"{ch}: {', '.join(missing)} not set — skipping")
             continue
         try:
             if ch == "telegram":
-                send_telegram(build_message(theme, weekday, videos, cfg, day_cfg),
-                              os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"])
+                text, kept = g.fit_telegram(lambda vs: build_message(theme, weekday, vs, cfg, day_cfg), videos)
+                if len(kept) < len(videos):
+                    warn(f"telegram: message too long, sent {len(kept)} of {len(videos)} videos")
+                send_telegram(text, os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"])
             else:
                 subject = f"{weekday.title()} — {theme}"
                 if videos:
@@ -433,7 +554,7 @@ def deliver(cfg, day_cfg, weekday, videos):
                            build_plain(theme, weekday, videos, cfg, day_cfg))
             delivered.append(ch)
         except Exception as ex:  # keep going: email can still land if Telegram is down
-            print(f"  ! {ch} failed: {ex}", file=sys.stderr)
+            warn(f"{ch} failed: {ex}")
     return delivered
 
 
@@ -442,12 +563,16 @@ def deliver(cfg, day_cfg, weekday, videos):
 def check(cfg, api_key):
     """Validate config, creator handles and secrets. Returns a process exit code."""
     problems, notes = [], []
-    days = cfg.get("days") or {}
-    for d in days:
-        if d not in WEEKDAYS:
-            problems.append(f"'{d}' under days: is not a weekday name (use monday … sunday)")
-        elif not (days[d] or {}).get("theme"):
-            problems.append(f"{d}: missing `theme:`")
+    try:
+        for w in g.validate_config(cfg):
+            notes.append(f"warning: {w}")
+        print("✓ config.yaml is valid")
+    except g.ConfigError as e:
+        problems += e.problems
+        notes += [f"warning: {w}" for w in e.warnings]
+        cfg = cfg if isinstance(cfg, dict) else {}
+    days = cfg.get("days") if isinstance(cfg.get("days"), dict) else {}
+    days = {str(k).lower(): v for k, v in days.items()}
     rest = [d for d in WEEKDAYS if d not in days]
     if rest:
         notes.append(f"rest days (nothing sent): {', '.join(rest)}")
@@ -460,16 +585,18 @@ def check(cfg, api_key):
             problems.append(f"{ch}: set {', '.join(missing)}")
         else:
             print(f"✓ {ch} secrets present")
+    problems += g.validate_env(delivery_channels(cfg))
 
-    handles = sorted({str(h).lstrip("@") for d in days.values() for h in ((d or {}).get("creators") or [])})
+    handles = sorted({h.lstrip("@") for d in days.values() if isinstance(d, dict)
+                      for h in (d.get("creators") or []) if isinstance(h, str) and g.HANDLE_RE.match(h)})
     if not api_key:
         problems.append("YOUTUBE_API_KEY is not set (can't check creator handles)")
     else:
         for h in handles:
             try:
                 cid, _ = resolve_channel(h, api_key)
-            except requests.HTTPError as e:
-                problems.append(f"YouTube API error {e.response.status_code} — is the key valid and the API enabled?")
+            except YouTubeError as e:
+                problems.append(f"{e} — is the key valid and YouTube Data API v3 enabled?")
                 break
             if cid:
                 print(f"✓ @{h}")
@@ -477,15 +604,15 @@ def check(cfg, api_key):
                 problems.append(f"@{h} not found — copy the part after @ from youtube.com/@handle")
 
     per_creator = 102 if cfg.get("match_theme", True) else 3
-    busiest = max((len((d or {}).get("creators") or []) for d in days.values()), default=0)
+    busiest = max((len(d.get("creators") or []) for d in days.values() if isinstance(d, dict)), default=0)
     notes.append(f"busiest day uses ~{busiest * per_creator} of 10,000 free YouTube units")
 
     for n in notes:
-        print(f"· {n}")
+        print(g.redact(f"· {n}"))
     if problems:
         print("\nFix these:")
         for p in problems:
-            print(f"  ✗ {p}")
+            print(g.redact(f"  ✗ {p}"))
         return 1
     print("\nAll good. Try: python watch_agent.py --dry-run")
     return 0
@@ -494,6 +621,23 @@ def check(cfg, api_key):
 # ── entry point ──────────────────────────────────────────────────────────────
 
 def main():
+    """Entry point: turns every failure into a short, secret-free message and a non-zero exit."""
+    try:
+        run()
+    except g.ConfigError as e:
+        sys.exit(f"{e}\n\nRun `python watch_agent.py --check` for a full setup check.")
+    except KeyboardInterrupt:
+        sys.exit("Stopped.")
+    except Exception as e:  # last line of defence: never dump secrets in a traceback message
+        if os.environ.get("DEBUG"):
+            raise
+        sys.exit(g.redact(f"Unexpected error ({type(e).__name__}): {e}\nSet DEBUG=1 for the full traceback."))
+    finally:
+        if QUOTA.used:
+            print(f"YouTube API units used this run: {QUOTA.used}")
+
+
+def run():
     ap = argparse.ArgumentParser(description="Send today's themed YouTube picks.")
     ap.add_argument("--day", help="weekday name, e.g. monday (default: today)")
     ap.add_argument("--dry-run", action="store_true", help="print today's picks, send nothing")
@@ -502,11 +646,12 @@ def main():
     ap.add_argument("--force", action="store_true", help="send even if already sent today")
     args = ap.parse_args()
 
-    cfg = load_config()
-    api_key = os.environ.get("YOUTUBE_API_KEY")
+    api_key = (os.environ.get("YOUTUBE_API_KEY") or "").strip() or None
 
     if args.check:
-        sys.exit(check(cfg, api_key))
+        sys.exit(check(load_config(validate=False), api_key))
+    cfg = load_config()
+    QUOTA.limit = cfg.get("max_api_units", g.DEFAULT_MAX_API_UNITS)
     if not api_key:
         sys.exit("YOUTUBE_API_KEY is not set (run with --check for a full setup check)")
     sent = load_sent()
@@ -549,7 +694,7 @@ def main():
         sys.exit("Nothing was delivered — run `python watch_agent.py --check` to see what's missing.")
     sent.update(v["id"] for v in videos)
     save_sent(sent)
-    LAST_PATH.write_text(today + "\n")
+    g.atomic_write(LAST_PATH, today + "\n")
     print(f"Sent {len(videos)} video(s) via {', '.join(delivered)}.")
 
 

@@ -41,6 +41,15 @@ daily_minutes_budget: 45
 # Shown at the end of every message. Override per day with `prompt:` under that day.
 prompt: "Before you close this: write down one idea you'll use this week."
 
+# Never send videos whose titles contain any of these (case-insensitive).
+# "#shorts" is always blocked.
+blocked_words: [prank, reaction, drama]
+
+# ── Safety ───────────────────────────────────────────────────
+# Hard cap on YouTube API units one run may spend (free quota is 10,000/day).
+# A normal day uses a few hundred; --preview of a whole week uses more.
+max_api_units: 5000
+
 # Where to send. One or both of: telegram, email  (see README for the secrets each needs)
 deliver: [telegram]
 
