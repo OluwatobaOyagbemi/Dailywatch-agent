@@ -158,3 +158,34 @@ test("session: a recent video found by the theme search is not labelled older", 
   assert.equal(body.videos[0].id, "quietnew001");
   assert.equal(body.videos[0].older, false);
 });
+
+// ── reminder feed ──────────────────────────────────────────────────────────
+
+test("reminder feed: valid calendar with timezone, folded lines, stable UID", async () => {
+  setup();
+  const r = await worker.fetch(new Request("https://helper.example/reminder.ics?days=MO,WE,FR&t=07:30&tz=America/New_York"), env, ctx);
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get("Content-Type"), /text\/calendar/);
+  const ics = await r.text();
+  assert.ok(ics.split("\r\n").every((l) => new TextEncoder().encode(l).length <= 75), "lines folded");
+  assert.match(ics, /RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR/);
+  assert.match(ics, /DTSTART;TZID=America\/New_York:\d{8}T073000/);
+  assert.match(ics, /BYMONTH=3;BYDAY=2SU/);   // US DST rule in the VTIMEZONE
+  const again = await (await worker.fetch(new Request("https://helper.example/reminder.ics?days=MO,WE,FR&t=07:30&tz=America/New_York"), env, ctx)).text();
+  assert.equal(ics.match(/UID:.*/)[0], again.match(/UID:.*/)[0]);
+  assert.ok(ics.includes("https://oluwatobaoyagbemi.github.io/Dailywatch-agent/"));
+});
+
+test("reminder feed: rejects bad input", async () => {
+  setup();
+  for (const qs of ["days=XX&t=07:30&tz=Africa/Lagos", "days=MO&t=7:30&tz=Africa/Lagos", "days=MO&t=07:30&tz=Not/AZone", "days=MO&t=07:30&tz=<script>"]) {
+    assert.equal((await worker.fetch(new Request(`https://helper.example/reminder.ics?${qs}`), env, ctx)).status, 400, qs);
+  }
+});
+
+test("offsetAt handles DST and fixed zones", () => {
+  assert.equal(lib.offsetAt("America/New_York", Date.UTC(2026, 0, 15, 12)), -300);
+  assert.equal(lib.offsetAt("America/New_York", Date.UTC(2026, 6, 15, 12)), -240);
+  assert.equal(lib.offsetAt("Africa/Lagos", Date.UTC(2026, 6, 15, 12)), 60);
+  assert.equal(lib.offsetAt("Asia/Kolkata", Date.UTC(2026, 6, 15, 12)), 330);
+});

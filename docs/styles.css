@@ -544,3 +544,6 @@ kbd {
 .reminder__when { font-size: 12px; color: var(--text-3); }
 .reminder__help { display: grid; gap: 4px; padding: 10px 12px; border-radius: var(--radius-sm);
   background: var(--surface-2); border: 1px solid var(--border-muted); font-size: 12.5px; color: var(--text-2); }
+.reminder__outlook { display: grid; gap: 8px; padding-top: 10px; border-top: 1px dashed var(--border-muted); }
+.reminder__sub { font-size: 13px; font-weight: 600; }
+.reminder__note { font-size: 12px; color: var(--text-3); }

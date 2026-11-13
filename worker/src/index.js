@@ -14,6 +14,7 @@
 import {
   CHANNEL_ID_RE, ValidationError, keywordsOf, onThemeRecent, parseFeed, parseSessionParams,
   publicVideo, roundRobin, isoDurationToMinutes, cleanText, VIDEO_ID_RE,
+  parseReminderParams, buildReminderIcs,
 } from "./lib.js";
 
 const YT = "https://www.googleapis.com/youtube/v3";
@@ -32,6 +33,7 @@ export default {
 
     const url = new URL(request.url);
     if (url.pathname === "/health") return json({ ok: true }, 200, cors);
+    if (url.pathname === "/reminder.ics") return reminderFeed(url, env);
     if (url.pathname !== "/session") return json({ error: "Not found." }, 404, cors);
     if (!env.YOUTUBE_API_KEY) return json({ error: "The helper isn't configured yet." }, 503, cors);
 
@@ -101,6 +103,27 @@ async function buildSession(params, env, ctx) {
   };
   const filtered = perCreator.map((list) => list.filter(keep));
   return { videos: roundRobin(filtered).slice(0, 20).map(publicVideo), notices };
+}
+
+// Calendar feed for "Subscribe in Outlook" (fetched by calendar servers, so no CORS needed).
+// The link always points at the configured site, never at a URL from the request.
+function reminderFeed(url, env) {
+  let params;
+  try {
+    params = parseReminderParams(url.searchParams);
+  } catch (e) {
+    if (e instanceof ValidationError) return new Response(e.message, { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+    throw e;
+  }
+  const site = /^https:\/\/[A-Za-z0-9.-]+\/[A-Za-z0-9._~\/-]*$/.test(env.SITE_URL || "") ? env.SITE_URL : "https://oluwatobaoyagbemi.github.io/Dailywatch-agent/";
+  return new Response(buildReminderIcs(params, site), {
+    headers: {
+      "Content-Type": "text/calendar; charset=utf-8",
+      "Content-Disposition": 'inline; filename="daily-watch.ics"',
+      "Cache-Control": "public, max-age=3600",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }
 
 // ── upstream calls ─────────────────────────────────────────────────────────
