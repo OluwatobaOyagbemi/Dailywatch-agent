@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-13",
-  "weekday": "friday",
-  "theme": "Men's Conference and Fatherhood",
+  "date": "2026-11-14",
+  "weekday": "saturday",
+  "theme": "Music, Guitar and Voice Training",
   "prompt": "Before you close this: write down one idea you'll use this week.",
-  "task": "Write one sentence about the man and father you're becoming, and one action toward it this week.",
+  "task": "Practise for 15 minutes: a warm-up plus the exercise from today's lesson.",
   "send_time": "12:00",
   "week": [
     {
@@ -44,53 +44,13 @@
   ],
   "videos": [
     {
-      "id": "Rp5UXvzsoaM",
-      "title": "Understanding The Power of Fatherhood | Dr. Myles Munroe | MunroeGlobal.com",
-      "channel": "Munroe Global",
-      "minutes": 84.83,
+      "id": "7Ud-sEAEBzc",
+      "title": "Spanish Love Songs' Dylan Slocum on Songwriting, Guitars & the Band",
+      "channel": "Andy Guitar",
+      "minutes": 38.07,
       "embeddable": true,
-      "older": true,
-      "published": "2026-06-07",
-      "note": ""
-    },
-    {
-      "id": "Q6PcI6JIUxI",
-      "title": "WHAT DO WE DO WITH MEN'S VULNERABILITY?",
-      "channel": "Femi Lazarus",
-      "minutes": 161.67,
-      "embeddable": true,
-      "older": true,
-      "published": "2026-06-17",
-      "note": ""
-    },
-    {
-      "id": "lYEdva76pok",
-      "title": "The Power and Purpose of The Family | Dr. Myles Munroe | MunroeGlobal.com",
-      "channel": "Munroe Global",
-      "minutes": 37.17,
-      "embeddable": true,
-      "older": true,
-      "published": "2026-02-01",
-      "note": ""
-    },
-    {
-      "id": "zTSwR8e8Vi0",
-      "title": "MANY SUCCESSFUL MEN ARE BROKEN. THESE ARE ISSUES OFTEN LEFT UNDISCUSSED . #declassified #podcast",
-      "channel": "Femi Lazarus",
-      "minutes": 76.17,
-      "embeddable": true,
-      "older": true,
-      "published": "2026-02-18",
-      "note": ""
-    },
-    {
-      "id": "k1LZgkpZFI8",
-      "title": "10 Qualities of A Kingdom Father | Dr. Myles Munroe | MunroeGlobal.com",
-      "channel": "Munroe Global",
-      "minutes": 75.43,
-      "embeddable": true,
-      "older": true,
-      "published": "2025-06-01",
+      "older": false,
+      "published": "2026-11-03",
       "note": ""
     }
   ]
