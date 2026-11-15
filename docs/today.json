@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-14",
-  "weekday": "saturday",
-  "theme": "Music, Guitar and Voice Training",
-  "prompt": "Before you close this: write down one idea you'll use this week.",
-  "task": "Practise for 15 minutes: a warm-up plus the exercise from today's lesson.",
+  "date": "2026-11-15",
+  "weekday": "sunday",
+  "theme": "Sermons",
+  "prompt": "What's one thing from this message you'll act on this week?",
+  "task": "Write down the key line or scripture from today's message and one way you'll live it this week.",
   "send_time": "12:00",
   "week": [
     {
@@ -44,13 +44,53 @@
   ],
   "videos": [
     {
-      "id": "7Ud-sEAEBzc",
-      "title": "Spanish Love Songs' Dylan Slocum on Songwriting, Guitars & the Band",
-      "channel": "Andy Guitar",
-      "minutes": 38.07,
+      "id": "Tb_bT3qWsYk",
+      "title": "DAILY PROPHETIC PRAYERS (DAY 6) - THE GENERAL ASSEMBLY 2026 ||14||11||26||",
+      "channel": "Koinonia Global",
+      "minutes": 63.7,
+      "embeddable": true,
+      "older": false,
+      "published": "2026-11-14",
+      "note": ""
+    },
+    {
+      "id": "OPtXdig_FQQ",
+      "title": "PREVAILING PRAYER | 2ND SERVICE | 8TH NOVEMBER 2026 | CELEBRATION CHURCH INT'L",
+      "channel": "Celebration Church TV",
+      "minutes": 165.43,
+      "embeddable": true,
+      "older": false,
+      "published": "2026-11-08",
+      "note": ""
+    },
+    {
+      "id": "5QQJP5W8gd8",
+      "title": "PROPHETIC PRAYER CONTACT || 7TH OCTOBER 2026",
+      "channel": "Femi Lazarus",
+      "minutes": 47.93,
+      "embeddable": true,
+      "older": false,
+      "published": "2026-10-07",
+      "note": ""
+    },
+    {
+      "id": "QiMP3K3Ne4w",
+      "title": "Meditation: Prophetic Imagination",
+      "channel": "Pastor Poju Oyemade",
+      "minutes": 48.17,
       "embeddable": true,
       "older": false,
       "published": "2026-11-03",
+      "note": ""
+    },
+    {
+      "id": "BJXxFieP_pI",
+      "title": "DAILY PROPHETIC PRAYERS (DAY 1) - THE GENERAL ASSEMBLY 2026 ||09||11||26||",
+      "channel": "Koinonia Global",
+      "minutes": 65.5,
+      "embeddable": true,
+      "older": false,
+      "published": "2026-11-09",
       "note": ""
     }
   ]
