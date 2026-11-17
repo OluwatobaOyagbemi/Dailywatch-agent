@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-16",
-  "weekday": "monday",
-  "theme": "Public Speaking and Communication",
+  "date": "2026-11-17",
+  "weekday": "tuesday",
+  "theme": "Mentorship and Leadership",
   "prompt": "Before you close this: write down one idea you'll use this week.",
-  "task": "Record a 60-second voice note explaining one idea from today's video.",
+  "task": "Write down one leadership habit from today and practise it once before bed.",
   "send_time": "12:00",
   "week": [
     {
@@ -44,53 +44,53 @@
   ],
   "videos": [
     {
-      "id": "f5RqYHd2cBQ",
-      "title": "How Would You Design Your Dream City? | James Rojas | TED",
-      "channel": "TED",
-      "minutes": 8.58,
+      "id": "0AZp-CiFTm4",
+      "title": "The Business of Storytelling with Author Don Yaeger (Part 1) (Maxwell Leadership Executive Podcast)",
+      "channel": "Maxwell Leadership",
+      "minutes": 27.2,
       "embeddable": true,
       "older": false,
       "published": "2026-11-12",
       "note": ""
     },
     {
-      "id": "z7LQZ00ZWP0",
-      "title": "Give Me 9 Minutes & I'll Fix Your Body Language",
-      "channel": "Philipp Humm",
-      "minutes": 9.22,
-      "embeddable": true,
-      "older": false,
-      "published": "2026-11-13",
-      "note": ""
-    },
-    {
-      "id": "yqgKPa1FWgA",
-      "title": "How to Start a Speech: The Best and Worst Speech Openers With Joyce Daniels, Public Speaking Coach",
-      "channel": "Joyce Daniels",
-      "minutes": 5.55,
+      "id": "Nxg9DZ7VFEU",
+      "title": "LIFE AS I SEE IT",
+      "channel": "Femi Lazarus",
+      "minutes": 56.75,
       "embeddable": true,
       "older": true,
-      "published": "2025-10-02",
+      "published": "2026-07-15",
       "note": ""
     },
     {
-      "id": "XGL5SnTgm5g",
-      "title": "YOU have the POWER! | Laurie Lynn | TEDxTinley Park",
-      "channel": "TEDx Talks",
-      "minutes": 12.3,
+      "id": "U7mc21oLUF8",
+      "title": "How To Lead From Who You Are",
+      "channel": "Munroe Global",
+      "minutes": 58.75,
+      "embeddable": true,
+      "older": true,
+      "published": "2025-08-20",
+      "note": ""
+    },
+    {
+      "id": "Krb8aeoMGRE",
+      "title": "The Inner SHIFTS - Master your Subconscious Mind",
+      "channel": "Sam Adeyemi",
+      "minutes": 66.03,
+      "embeddable": true,
+      "older": true,
+      "published": "2026-07-07",
+      "note": ""
+    },
+    {
+      "id": "hfS7hqyEiZs",
+      "title": "Great Leaders Are Willing to Make Hard Decisions (Maxwell Leadership Podcast)",
+      "channel": "Maxwell Leadership",
+      "minutes": 28.77,
       "embeddable": true,
       "older": false,
       "published": "2026-11-11",
-      "note": ""
-    },
-    {
-      "id": "2PvTloze3vY",
-      "title": "POWERFUL Storytelling Secrets to Level Up Your Communication Skills",
-      "channel": "Joyce Daniels",
-      "minutes": 5.47,
-      "embeddable": true,
-      "older": true,
-      "published": "2025-09-23",
       "note": ""
     }
   ]
