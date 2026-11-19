@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-18",
-  "weekday": "wednesday",
-  "theme": "Relationship, Communication and Marriage",
+  "date": "2026-11-19",
+  "weekday": "thursday",
+  "theme": "Finance, Money and Business",
   "prompt": "Before you close this: write down one idea you'll use this week.",
-  "task": "Send one intentional message of appreciation to someone you care about.",
+  "task": "Spend 10 minutes on your money: check a balance, a budget line or one subscription.",
   "send_time": "12:00",
   "week": [
     {
@@ -44,53 +44,23 @@
   ],
   "videos": [
     {
-      "id": "vQY5U8Yn5h8",
-      "title": "Why living together before marriage NEVER works 💔 (7 Reasons)",
-      "channel": "Ezinne Zara",
-      "minutes": 25.73,
-      "embeddable": false,
-      "older": true,
-      "published": "2026-07-17",
-      "note": ""
-    },
-    {
-      "id": "LIDI0LQYNRI",
-      "title": "Am I scared to trust God? - Pst. Dolapo Lawal",
-      "channel": "Pastor Dolapo Lawal",
-      "minutes": 98.07,
+      "id": "mUz_tHYLhUs",
+      "title": "I Tried AI Dropshipping For 7 Days, Copy Every Step",
+      "channel": "Mark Tilbury",
+      "minutes": 230.8,
       "embeddable": true,
-      "older": true,
-      "published": "2026-09-07",
+      "older": false,
+      "published": "2026-11-03",
       "note": ""
     },
     {
-      "id": "vm4OwvgeujY",
-      "title": "Understanding True Manhood | Dr. Myles Munroe on Manhood | MunroeGlobal.com",
-      "channel": "Munroe Global",
-      "minutes": 38.78,
+      "id": "vYNQJMpLM80",
+      "title": "Investment Tips for Beginners | Adesina Intelligence",
+      "channel": "Adesina",
+      "minutes": 19.35,
       "embeddable": true,
-      "older": true,
-      "published": "2024-06-02",
-      "note": ""
-    },
-    {
-      "id": "ZcJlrMXtqX4",
-      "title": "Dating After 30, Being Single & Lonely, Female Abuse & MORE! Olive Emodi ✨",
-      "channel": "Ezinne Zara",
-      "minutes": 46.97,
-      "embeddable": false,
-      "older": true,
-      "published": "2026-05-15",
-      "note": ""
-    },
-    {
-      "id": "WcC0tKvdcHA",
-      "title": "Overcoming Addictions - Pastor Dolapo Lawal",
-      "channel": "Pastor Dolapo Lawal",
-      "minutes": 63.0,
-      "embeddable": true,
-      "older": true,
-      "published": "2026-08-22",
+      "older": false,
+      "published": "2026-11-13",
       "note": ""
     }
   ]
