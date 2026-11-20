@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-19",
-  "weekday": "thursday",
-  "theme": "Finance, Money and Business",
+  "date": "2026-11-20",
+  "weekday": "friday",
+  "theme": "Men's Conference and Fatherhood",
   "prompt": "Before you close this: write down one idea you'll use this week.",
-  "task": "Spend 10 minutes on your money: check a balance, a budget line or one subscription.",
+  "task": "Write one sentence about the man and father you're becoming, and one action toward it this week.",
   "send_time": "12:00",
   "week": [
     {
@@ -44,23 +44,53 @@
   ],
   "videos": [
     {
-      "id": "mUz_tHYLhUs",
-      "title": "I Tried AI Dropshipping For 7 Days, Copy Every Step",
-      "channel": "Mark Tilbury",
-      "minutes": 230.8,
+      "id": "Gy_tHy6_KHc",
+      "title": "The Husband and Wife’s Role In Marriage | Dr. Myles Munroe",
+      "channel": "Munroe Global",
+      "minutes": 57.08,
       "embeddable": true,
-      "older": false,
-      "published": "2026-11-03",
+      "older": true,
+      "published": "2022-04-10",
       "note": ""
     },
     {
-      "id": "vYNQJMpLM80",
-      "title": "Investment Tips for Beginners | Adesina Intelligence",
-      "channel": "Adesina",
-      "minutes": 19.35,
+      "id": "zFUM_Dya7U8",
+      "title": "The Advantage of Being Single Part 1 | Dr. Myles Munroe",
+      "channel": "Munroe Global",
+      "minutes": 68.5,
       "embeddable": true,
-      "older": false,
-      "published": "2026-11-13",
+      "older": true,
+      "published": "2021-10-03",
+      "note": ""
+    },
+    {
+      "id": "kVkW5Nt9YHE",
+      "title": "Key Dating Advice From Dr. Myles Munroe You Need To Hear | MunroeGlobal.com",
+      "channel": "Munroe Global",
+      "minutes": 8.7,
+      "embeddable": true,
+      "older": true,
+      "published": "2021-09-08",
+      "note": ""
+    },
+    {
+      "id": "-65jxGAxMco",
+      "title": "Defining The Husband's Role In Relationship: Dr. Myles Munroe On Marriage | MunroeGlobal.com",
+      "channel": "Munroe Global",
+      "minutes": 5.1,
+      "embeddable": true,
+      "older": true,
+      "published": "2020-10-30",
+      "note": ""
+    },
+    {
+      "id": "QJtthc3cyZs",
+      "title": "Understanding The Kingdom Principle of Fatherhood | Dr. Myles Munroe",
+      "channel": "Munroe Global",
+      "minutes": 73.43,
+      "embeddable": true,
+      "older": true,
+      "published": "2020-06-21",
       "note": ""
     }
   ]
