@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-20",
-  "weekday": "friday",
-  "theme": "Men's Conference and Fatherhood",
+  "date": "2026-11-21",
+  "weekday": "saturday",
+  "theme": "Music, Guitar and Voice Training",
   "prompt": "Before you close this: write down one idea you'll use this week.",
-  "task": "Write one sentence about the man and father you're becoming, and one action toward it this week.",
+  "task": "Practise for 15 minutes: a warm-up plus the exercise from today's lesson.",
   "send_time": "12:00",
   "week": [
     {
@@ -44,53 +44,13 @@
   ],
   "videos": [
     {
-      "id": "Gy_tHy6_KHc",
-      "title": "The Husband and Wife’s Role In Marriage | Dr. Myles Munroe",
-      "channel": "Munroe Global",
-      "minutes": 57.08,
+      "id": "RPBSIEnAP_4",
+      "title": "The Secret to Singing in Tune (It’s Not What You Think!) with The Charismatic Voice",
+      "channel": "Andy Guitar",
+      "minutes": 13.23,
       "embeddable": true,
       "older": true,
-      "published": "2022-04-10",
-      "note": ""
-    },
-    {
-      "id": "zFUM_Dya7U8",
-      "title": "The Advantage of Being Single Part 1 | Dr. Myles Munroe",
-      "channel": "Munroe Global",
-      "minutes": 68.5,
-      "embeddable": true,
-      "older": true,
-      "published": "2021-10-03",
-      "note": ""
-    },
-    {
-      "id": "kVkW5Nt9YHE",
-      "title": "Key Dating Advice From Dr. Myles Munroe You Need To Hear | MunroeGlobal.com",
-      "channel": "Munroe Global",
-      "minutes": 8.7,
-      "embeddable": true,
-      "older": true,
-      "published": "2021-09-08",
-      "note": ""
-    },
-    {
-      "id": "-65jxGAxMco",
-      "title": "Defining The Husband's Role In Relationship: Dr. Myles Munroe On Marriage | MunroeGlobal.com",
-      "channel": "Munroe Global",
-      "minutes": 5.1,
-      "embeddable": true,
-      "older": true,
-      "published": "2020-10-30",
-      "note": ""
-    },
-    {
-      "id": "QJtthc3cyZs",
-      "title": "Understanding The Kingdom Principle of Fatherhood | Dr. Myles Munroe",
-      "channel": "Munroe Global",
-      "minutes": 73.43,
-      "embeddable": true,
-      "older": true,
-      "published": "2020-06-21",
+      "published": "2025-03-17",
       "note": ""
     }
   ]
