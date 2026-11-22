@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-21",
-  "weekday": "saturday",
-  "theme": "Music, Guitar and Voice Training",
-  "prompt": "Before you close this: write down one idea you'll use this week.",
-  "task": "Practise for 15 minutes: a warm-up plus the exercise from today's lesson.",
+  "date": "2026-11-22",
+  "weekday": "sunday",
+  "theme": "Sermons",
+  "prompt": "What's one thing from this message you'll act on this week?",
+  "task": "Write down the key line or scripture from today's message and one way you'll live it this week.",
   "send_time": "12:00",
   "week": [
     {
@@ -44,13 +44,53 @@
   ],
   "videos": [
     {
-      "id": "RPBSIEnAP_4",
-      "title": "The Secret to Singing in Tune (It’s Not What You Think!) with The Charismatic Voice",
-      "channel": "Andy Guitar",
-      "minutes": 13.23,
+      "id": "tLb4KHhiUM4",
+      "title": "DAY 2 (EVENING SESSION) - THE GENERAL ASSEMBLY 2026 || APOSTLE JOSHUA SELMAN ||19||11||26||",
+      "channel": "Koinonia Global",
+      "minutes": 315.03,
       "embeddable": true,
-      "older": true,
-      "published": "2025-03-17",
+      "older": false,
+      "published": "2026-11-19",
+      "note": ""
+    },
+    {
+      "id": "TuikgucRc-U",
+      "title": "PRE-REBOOT FASTING AND PRAYER - DAY 4 | 12TH NOVEMBER 2026 | CELEBRATION CHURCH INT'L",
+      "channel": "Celebration Church TV",
+      "minutes": 60.67,
+      "embeddable": true,
+      "older": false,
+      "published": "2026-11-12",
+      "note": ""
+    },
+    {
+      "id": "rrBkG1hDgLg",
+      "title": "PROPHETIC PRAYER CONTACT || 6TH OCTOBER 2026",
+      "channel": "Femi Lazarus",
+      "minutes": 70.28,
+      "embeddable": true,
+      "older": false,
+      "published": "2026-10-06",
+      "note": ""
+    },
+    {
+      "id": "F5AytMxdNmg",
+      "title": "Principles Of Walking In Dominion Pt 1",
+      "channel": "Pastor Poju Oyemade",
+      "minutes": 75.82,
+      "embeddable": true,
+      "older": false,
+      "published": "2026-11-02",
+      "note": ""
+    },
+    {
+      "id": "ToOSeSwhseM",
+      "title": "MORE THAN CONQUERORS (ENFORCING VICTORY &TRIUMPH) || THE GENERAL ASSEMBLY DAY2 || APST JOSHUA SELMAN",
+      "channel": "Koinonia Global",
+      "minutes": 262.78,
+      "embeddable": true,
+      "older": false,
+      "published": "2026-11-19",
       "note": ""
     }
   ]
