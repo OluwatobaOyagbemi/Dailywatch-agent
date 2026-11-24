@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-23",
-  "weekday": "monday",
-  "theme": "Public Speaking and Communication",
+  "date": "2026-11-24",
+  "weekday": "tuesday",
+  "theme": "Mentorship and Leadership",
   "prompt": "Before you close this: write down one idea you'll use this week.",
-  "task": "Record a 60-second voice note explaining one idea from today's video.",
+  "task": "Write down one leadership habit from today and practise it once before bed.",
   "send_time": "12:00",
   "week": [
     {
@@ -44,53 +44,53 @@
   ],
   "videos": [
     {
-      "id": "ElYYD7Wx2WE",
-      "title": "Idiots Are Everywhere. Here’s How to Cope | Joshua Johnson | TED",
-      "channel": "TED",
-      "minutes": 6.38,
-      "embeddable": true,
-      "older": true,
-      "published": "2026-08-10",
-      "note": ""
-    },
-    {
-      "id": "UNKSfU3vu2U",
-      "title": "Steal These 5 Speaking Habits From Obama",
-      "channel": "Philipp Humm",
-      "minutes": 8.8,
-      "embeddable": true,
-      "older": true,
-      "published": "2026-05-09",
-      "note": ""
-    },
-    {
-      "id": "FIlO1TUj3IA",
-      "title": "Stop Being Shy at Work - 5 Steps to Speak With Confidence with Joyce Daniels, Public Speaking Coach",
-      "channel": "Joyce Daniels",
-      "minutes": 8.52,
-      "embeddable": true,
-      "older": true,
-      "published": "2025-09-03",
-      "note": ""
-    },
-    {
-      "id": "AYtKINHU9PA",
-      "title": "Stories from the Field | Silent Architects | Kunal Rahar | TEDxBITSPilani",
-      "channel": "TEDx Talks",
-      "minutes": 11.97,
+      "id": "KurtQ4L6Tqg",
+      "title": "Learn to deal with rude people at work!",
+      "channel": "Maxwell Leadership",
+      "minutes": 13.33,
       "embeddable": true,
       "older": false,
-      "published": "2026-11-23",
+      "published": "2026-11-20",
       "note": ""
     },
     {
-      "id": "ZmNpeXTj2c4",
-      "title": "The Secret to Telling a Great Story — in Less Than 60 Seconds | Jenny Hoyos | TED",
-      "channel": "TED",
-      "minutes": 4.0,
+      "id": "aWDZ0-tj-UA",
+      "title": "THE BATTLE BETWEEN TRADITION, POWER AND THE FUTURE OF THE CHURCH",
+      "channel": "Femi Lazarus",
+      "minutes": 62.83,
+      "embeddable": true,
+      "older": false,
+      "published": "2026-11-18",
+      "note": ""
+    },
+    {
+      "id": "JWqFIaIZiG4",
+      "title": "Habits For Personal Growth & Leadership",
+      "channel": "Munroe Global",
+      "minutes": 63.72,
       "embeddable": true,
       "older": true,
-      "published": "2025-01-30",
+      "published": "2025-07-24",
+      "note": ""
+    },
+    {
+      "id": "guQBjGITp_k",
+      "title": "How clear leaders create clear results",
+      "channel": "Sam Adeyemi",
+      "minutes": 73.03,
+      "embeddable": true,
+      "older": true,
+      "published": "2026-06-15",
+      "note": ""
+    },
+    {
+      "id": "DJhyCzE5SXM",
+      "title": "How to be a High Road Leader",
+      "channel": "Maxwell Leadership",
+      "minutes": 14.88,
+      "embeddable": true,
+      "older": false,
+      "published": "2026-11-20",
       "note": ""
     }
   ]
