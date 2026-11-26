@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-25",
-  "weekday": "wednesday",
-  "theme": "Relationship, Communication and Marriage",
+  "date": "2026-11-26",
+  "weekday": "thursday",
+  "theme": "Finance, Money and Business",
   "prompt": "Before you close this: write down one idea you'll use this week.",
-  "task": "Send one intentional message of appreciation to someone you care about.",
+  "task": "Spend 10 minutes on your money: check a balance, a budget line or one subscription.",
   "send_time": "12:00",
   "week": [
     {
@@ -44,53 +44,53 @@
   ],
   "videos": [
     {
-      "id": "iF1GXnnJxUA",
-      "title": "P0rn, Lust & Addiction + Dating & Boundaries + Growing in Intimacy With God & MORE! Gideon Vese",
-      "channel": "Ezinne Zara",
-      "minutes": 52.48,
-      "embeddable": true,
-      "older": true,
-      "published": "2026-03-27",
-      "note": ""
-    },
-    {
-      "id": "LZy7B46BU1s",
-      "title": "Having a Daily Devotion - Pst. Dolapo Lawal",
-      "channel": "Pastor Dolapo Lawal",
-      "minutes": 76.27,
-      "embeddable": true,
-      "older": true,
-      "published": "2026-08-17",
-      "note": ""
-    },
-    {
-      "id": "AvzDPvsEqX8",
-      "title": "THE DIFFERENCE BETWEEN WHO YOU ARE AND WHO YOU BECAME TO SURVIVE",
-      "channel": "Femi Lazarus",
-      "minutes": 69.98,
+      "id": "uy2JLqwiZpU",
+      "title": "7 Passive Income Ideas for 2027 (Up to $1,000/Day)",
+      "channel": "Mark Tilbury",
+      "minutes": 27.48,
       "embeddable": true,
       "older": false,
-      "published": "2026-11-25",
+      "published": "2026-11-21",
       "note": ""
     },
     {
-      "id": "M8-wJ_95-Zw",
-      "title": "Empowering Love: Dr. Myles Munroe On Kingdom Influence & Culture | MunroeGlobal.com",
-      "channel": "Munroe Global",
-      "minutes": 81.73,
+      "id": "v18kXeLf2Rw",
+      "title": "Investors' Approach to Reviving A Failing Business | Adesina Intelligence",
+      "channel": "Adesina",
+      "minutes": 46.85,
       "embeddable": true,
       "older": true,
-      "published": "2024-02-04",
+      "published": "2026-08-21",
       "note": ""
     },
     {
-      "id": "nzZmqUNeZXc",
-      "title": "She refused to seduce a married man, so HIS wife made her a billionaire?! 😵 💫",
-      "channel": "Ezinne Zara",
-      "minutes": 27.28,
-      "embeddable": false,
+      "id": "ZzDRSxx3zgY",
+      "title": "I Built A Business From Scratch Only Following Claude’s Advice",
+      "channel": "Mark Tilbury",
+      "minutes": 27.85,
+      "embeddable": true,
+      "older": false,
+      "published": "2026-11-16",
+      "note": ""
+    },
+    {
+      "id": "pCrKKszDPb4",
+      "title": "The Investors Appetite | Adesina Intelligence",
+      "channel": "Adesina",
+      "minutes": 31.02,
+      "embeddable": true,
       "older": true,
-      "published": "2026-03-20",
+      "published": "2026-08-14",
+      "note": ""
+    },
+    {
+      "id": "zoQraz9hMQw",
+      "title": "The Naira-Dollar Dilemma in Valuing Nigerian Businesses | Adesina Intelligence",
+      "channel": "Adesina",
+      "minutes": 25.17,
+      "embeddable": true,
+      "older": true,
+      "published": "2026-06-26",
       "note": ""
     }
   ]
