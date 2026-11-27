@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-26",
-  "weekday": "thursday",
-  "theme": "Finance, Money and Business",
+  "date": "2026-11-27",
+  "weekday": "friday",
+  "theme": "Men's Conference and Fatherhood",
   "prompt": "Before you close this: write down one idea you'll use this week.",
-  "task": "Spend 10 minutes on your money: check a balance, a budget line or one subscription.",
+  "task": "Write one sentence about the man and father you're becoming, and one action toward it this week.",
   "send_time": "12:00",
   "week": [
     {
@@ -44,53 +44,53 @@
   ],
   "videos": [
     {
-      "id": "uy2JLqwiZpU",
-      "title": "7 Passive Income Ideas for 2027 (Up to $1,000/Day)",
-      "channel": "Mark Tilbury",
-      "minutes": 27.48,
-      "embeddable": true,
-      "older": false,
-      "published": "2026-11-21",
-      "note": ""
-    },
-    {
-      "id": "v18kXeLf2Rw",
-      "title": "Investors' Approach to Reviving A Failing Business | Adesina Intelligence",
-      "channel": "Adesina",
-      "minutes": 46.85,
+      "id": "bfU-s69cxjU",
+      "title": "Building Strong Families: Dr. Myles Munroe's Guide To Male Leadership | MunroeGlobal.com",
+      "channel": "Munroe Global",
+      "minutes": 59.25,
       "embeddable": true,
       "older": true,
-      "published": "2026-08-21",
+      "published": "2020-06-14",
       "note": ""
     },
     {
-      "id": "ZzDRSxx3zgY",
-      "title": "I Built A Business From Scratch Only Following Claude’s Advice",
-      "channel": "Mark Tilbury",
-      "minutes": 27.85,
-      "embeddable": true,
-      "older": false,
-      "published": "2026-11-16",
-      "note": ""
-    },
-    {
-      "id": "pCrKKszDPb4",
-      "title": "The Investors Appetite | Adesina Intelligence",
-      "channel": "Adesina",
-      "minutes": 31.02,
+      "id": "QhGW7NH-DpQ",
+      "title": "A Man and His Sex Life Part 2 | Dr. Myles Munroe",
+      "channel": "Munroe Global",
+      "minutes": 62.53,
       "embeddable": true,
       "older": true,
-      "published": "2026-08-14",
+      "published": "2020-06-07",
       "note": ""
     },
     {
-      "id": "zoQraz9hMQw",
-      "title": "The Naira-Dollar Dilemma in Valuing Nigerian Businesses | Adesina Intelligence",
-      "channel": "Adesina",
-      "minutes": 25.17,
+      "id": "mAziek5GOs8",
+      "title": "The Duties of A Father To His Children | Dr. Myles Munroe",
+      "channel": "Munroe Global",
+      "minutes": 76.1,
       "embeddable": true,
       "older": true,
-      "published": "2026-06-26",
+      "published": "2019-12-08",
+      "note": ""
+    },
+    {
+      "id": "j19f_Nm_1TI",
+      "title": "How To Love Your Wife | Dr. Myles Munroe",
+      "channel": "Munroe Global",
+      "minutes": 64.27,
+      "embeddable": true,
+      "older": true,
+      "published": "2019-12-01",
+      "note": ""
+    },
+    {
+      "id": "6ApPQjD7lOA",
+      "title": "For Men Only | Dr. Myles Munroe",
+      "channel": "Munroe Global",
+      "minutes": 71.55,
+      "embeddable": true,
+      "older": true,
+      "published": "2019-11-27",
       "note": ""
     }
   ]
